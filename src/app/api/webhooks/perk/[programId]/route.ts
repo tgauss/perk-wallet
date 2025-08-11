@@ -41,7 +41,8 @@ async function resolveProgram(programId: string) {
 async function upsertParticipant(
   program: any,
   perkParticipantId: number,
-  email: string
+  email: string,
+  eventData?: any
 ): Promise<ParticipantRow> {
   console.log('Looking for participant:', perkParticipantId, 'in program:', program.id);
 
@@ -96,26 +97,48 @@ async function upsertParticipant(
     }
 
     participant = newParticipant;
-  } else if (participant.perk_participant_id !== String(perkParticipantId)) {
-    console.log('Updating participant perk_participant_id');
-    // Update perk_participant_id if it was found by email but has different ID
-    const { data: updatedParticipant, error: updateError } = await supabase
-      .from('participants')
-      .update({
-        perk_participant_id: String(perkParticipantId), // Convert to string
-        email: email, // Ensure email is also up to date
-      })
-      .eq('perk_uuid', participant.perk_uuid)
-      .select()
-      .single();
+  } else {
+    // Update existing participant - check if we need to update ID or points
+    const updates: any = {};
+    let needsUpdate = false;
 
-    console.log('Update result:', { updatedParticipant, updateError });
-
-    if (updateError) {
-      throw new Error(`Failed to update participant: ${updateError.message}`);
+    if (participant.perk_participant_id !== String(perkParticipantId)) {
+      console.log('Updating participant perk_participant_id');
+      updates.perk_participant_id = String(perkParticipantId);
+      updates.email = email;
+      needsUpdate = true;
     }
 
-    participant = updatedParticipant;
+    // Update points if provided in event data
+    if (eventData && typeof eventData.points === 'number') {
+      console.log('Updating participant points from', participant.points, 'to', eventData.points);
+      updates.points = eventData.points;
+      needsUpdate = true;
+    }
+
+    // Update unused_points if provided in event data
+    if (eventData && typeof eventData.unused_points === 'number') {
+      console.log('Updating participant unused_points from', participant.unused_points, 'to', eventData.unused_points);
+      updates.unused_points = eventData.unused_points;
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      const { data: updatedParticipant, error: updateError } = await supabase
+        .from('participants')
+        .update(updates)
+        .eq('perk_uuid', participant.perk_uuid)
+        .select()
+        .single();
+
+      console.log('Update result:', { updatedParticipant, updateError });
+
+      if (updateError) {
+        throw new Error(`Failed to update participant: ${updateError.message}`);
+      }
+
+      participant = updatedParticipant;
+    }
   }
 
   return participant as ParticipantRow;
@@ -194,7 +217,8 @@ export async function POST(
       const participant = await upsertParticipant(
         program,
         body.data.participant.id,
-        body.data.participant.email
+        body.data.participant.email,
+        body.data.participant // Pass the full participant data for points updates
       );
       console.log('Upserted participant:', participant.perk_uuid);
 
