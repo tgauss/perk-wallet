@@ -4,7 +4,7 @@ Goal
 - Issue two grouped passes per participant: Loyalty and My Rewards.
 - Canonical ID and QR payload: PERK UUID, signed.
 - Sync points, tier, status from Perk in ≤ 60s p95.
-- Universal magic link: https://wallet.perk.ooo/{programId}/{perkUuid}.
+- Universal magic link: https://pass.perk.ooo/w/{programId}/{perkUuid}.
 - Write safe wallet identifiers + install_url back to Perk profile_attributes.
 
 Tech
@@ -47,7 +47,7 @@ Rules
 - Group on iOS by groupingIdentifier = String(programId)
 - QR verifier returns PERK UUID
 - Write back to Perk profile_attributes:
-  - wallet.install_url = https://wallet.perk.ooo/{programId}/{perkUuid}
+  - wallet.install_url = https://pass.perk.ooo/w/{programId}/{perkUuid}
   - wallet.apple.serial, wallet.google.object_id, wallet.version, timestamps
 - Skip updates when hash unchanged
 - Idempotency = event.id or sha256(body)

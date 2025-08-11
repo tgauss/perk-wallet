@@ -6,7 +6,7 @@ A Next.js application for issuing and managing Apple Wallet and Google Wallet pa
 
 - **Dual Pass Issuance**: Issues both Loyalty and My Rewards passes grouped together
 - **QR Code Generation**: Signed QR codes with HMAC-SHA256 and 180-second TTL
-- **Universal Magic Links**: `https://wallet.perk.ooo/{programId}/{perkUuid}`
+- **Universal Magic Links**: `https://pass.perk.ooo/w/{programId}/{perkUuid}`
 - **Webhook Processing**: Handles Perk events with idempotency
 - **API Resilience**: Automatic retry with exponential backoff and 429 rate limit handling
 - **Real-time Sync**: Updates passes within 60 seconds (p95) of Perk events

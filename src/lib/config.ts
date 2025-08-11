@@ -21,7 +21,7 @@ const envSchema = z.object({
   GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL: z.string().email(),
   GOOGLE_WALLET_SERVICE_ACCOUNT_KEY: z.string().min(1),
   
-  NEXT_PUBLIC_APP_URL: z.string().url().default('https://wallet.perk.ooo'),
+  NEXT_PUBLIC_APP_URL: z.string().url().default('https://pass.perk.ooo'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 

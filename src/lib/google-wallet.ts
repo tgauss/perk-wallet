@@ -65,13 +65,13 @@ export class GoogleWalletBuilder {
       programName: 'Perk Loyalty Program',
       programLogo: {
         sourceUri: {
-          uri: 'https://wallet.perk.ooo/logo.png',
+          uri: 'https://pass.perk.ooo/logo.png',
         },
       },
       hexBackgroundColor: '#3C414C',
       heroImage: {
         sourceUri: {
-          uri: 'https://wallet.perk.ooo/hero.png',
+          uri: 'https://pass.perk.ooo/hero.png',
         },
       },
       multipleDevicesAndHoldersAllowedStatus: 'MULTIPLE_HOLDERS',
