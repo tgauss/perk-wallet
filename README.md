@@ -95,6 +95,116 @@ pnpm dev
 
 Visit http://localhost:3000
 
+### Admin Interface
+
+The application includes a comprehensive admin interface with role-based access control:
+
+```bash
+# Visit the admin interface
+http://localhost:3000/admin
+```
+
+#### Admin + Role Emulator
+
+For development and testing, the admin interface uses a role emulator that allows you to simulate different user roles without real authentication.
+
+##### Setup
+
+1. **Set Emulator Secret** (required):
+   ```bash
+   # Add to your .env.local
+   APP_EMULATOR_SECRET=your-secure-secret-key-here
+   ```
+
+2. **Access Admin Emulator**:
+   Visit `/admin/emulator` to set your role and program context
+
+##### Available Roles
+
+- **super_admin**: Full access across all programs
+- **program_admin**: Full access within assigned program(s)  
+- **program_editor**: Edit templates, manage passes, send notifications (no secrets access)
+- **program_viewer**: Read-only access
+- **support**: Limited write access (reissue passes, resend install links)
+
+##### Admin Features
+
+**Dashboard** (`/admin`)
+- System KPIs and health metrics
+- Program-specific or cross-program statistics
+- Real-time activity monitoring
+
+**Programs** (`/admin/programs`)
+- List all programs (super_admin) or assigned program
+- Program configuration and branding editor
+- API key management (server-side only for security)
+
+**Templates** (`/admin/templates`)
+- JSON editor for Apple Wallet and Google Wallet templates
+- Template versioning with "Bump Version" functionality
+- Zod validation for template schemas
+
+**Participants** (`/admin/participants`)
+- Search participants by email or UUID
+- View participant details, points, and tier status
+- Actions: Reissue passes, resend Magic Install links
+
+**Passes** (`/admin/passes`)
+- View all wallet passes with sync status
+- Force update passes or expire them
+- Error monitoring and troubleshooting
+
+**Jobs** (`/admin/jobs`)
+- Monitor background job execution
+- View job payloads and error details
+- Retry failed jobs with permission checks
+
+**Webhooks** (`/admin/webhooks`)
+- View webhook event history
+- Pretty-print event payloads
+- Generate cURL commands for event replay
+
+##### Security Features
+
+- **Server-side permission checks**: All admin actions verify permissions server-side
+- **Secret redaction**: API keys are never sent to client, only server-side copy actions
+- **Signed JWT cookies**: Emulator uses cryptographically signed identity tokens
+- **Role-based UI**: Interface adapts based on user permissions
+
+##### Switching Programs
+
+Non-super-admin roles are scoped to specific programs. Super admins can:
+- View "All Programs" or scope to a specific program
+- Switch program context via the top bar program switcher
+
+##### Production Deployment
+
+When deploying to production:
+1. The emulator requires `APP_EMULATOR_SECRET` to be set
+2. Without the secret, a warning banner appears with degraded security
+3. The emulator can be disabled by implementing real authentication
+4. All admin routes are protected by middleware
+
+##### Development Workflow
+
+```bash
+# 1. Set your emulator secret
+echo "APP_EMULATOR_SECRET=dev-secret-123" >> .env.local
+
+# 2. Start development server
+pnpm dev
+
+# 3. Visit admin emulator
+open http://localhost:3000/admin/emulator
+
+# 4. Choose role (e.g., super_admin) and optionally select program
+
+# 5. Access admin interface
+# You'll be redirected to /admin with your selected role
+```
+
+The admin interface provides a complete management experience while maintaining security through proper permission checks and server-side validation.
+
 ## API Endpoints
 
 ### Webhooks
