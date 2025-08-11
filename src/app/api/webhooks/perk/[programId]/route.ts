@@ -42,7 +42,8 @@ async function upsertParticipant(
   program: any,
   perkParticipantId: number,
   email: string,
-  eventData?: any
+  eventData?: any,
+  eventType?: string
 ): Promise<ParticipantRow> {
   console.log('Looking for participant:', perkParticipantId, 'in program:', program.id);
 
@@ -73,7 +74,14 @@ async function upsertParticipant(
     // Generate perk_uuid - using UUID format
     const perkUuid = randomUUID();
     
-    console.log('Creating new participant with perk_uuid:', perkUuid);
+    console.log(`Creating new participant with perk_uuid: ${perkUuid} for event: ${eventType}`);
+
+    // Create event tracking attributes
+    const eventTracking = {
+      last_event_type: eventType,
+      last_event_at: new Date().toISOString(),
+      event_history: [{ type: eventType, timestamp: new Date().toISOString() }]
+    };
 
     // Create new participant
     const { data: newParticipant, error: insertError } = await supabase
@@ -83,9 +91,10 @@ async function upsertParticipant(
         program_id: program.id,
         perk_participant_id: String(perkParticipantId), // Convert to string
         email: email,
-        points: 0,
+        points: eventData?.points || 0,
+        unused_points: eventData?.unused_points || 0,
         status: 'active',
-        profile_attributes: {},
+        profile_attributes: eventTracking,
       })
       .select()
       .single();
@@ -123,7 +132,28 @@ async function upsertParticipant(
       needsUpdate = true;
     }
 
+    // Always update event tracking for existing participants
+    if (eventType) {
+      const existingAttributes = participant.profile_attributes || {};
+      const eventHistory = existingAttributes.event_history || [];
+      
+      // Add new event to history (keep last 10 events)
+      const updatedHistory = [
+        { type: eventType, timestamp: new Date().toISOString() },
+        ...eventHistory.slice(0, 9)
+      ];
+
+      updates.profile_attributes = {
+        ...existingAttributes,
+        last_event_type: eventType,
+        last_event_at: new Date().toISOString(),
+        event_history: updatedHistory
+      };
+      needsUpdate = true;
+    }
+
     if (needsUpdate) {
+      console.log(`Updating participant for event: ${eventType}`);
       const { data: updatedParticipant, error: updateError } = await supabase
         .from('participants')
         .update(updates)
@@ -190,7 +220,6 @@ export async function POST(
 
     console.log('=== WEBHOOK START ===');
     console.log('Program ID:', programId);
-    console.log('Raw body:', rawBody);
     console.log('Idem key:', idemKey);
 
     // Parse and validate the payload
@@ -205,7 +234,8 @@ export async function POST(
       );
     }
 
-    console.log(`Processing Perk webhook: ${body.event} for program ${programId}`);
+    console.log(`🎯 Processing Perk webhook: ${body.event} for program ${programId}`);
+    console.log('📦 Event data:', JSON.stringify(body.data, null, 2));
 
     // Resolve program
     try {
@@ -213,12 +243,13 @@ export async function POST(
       console.log('Program resolved:', program.id);
 
       // Upsert participant
-      console.log('Upserting participant:', body.data.participant.id, body.data.participant.email);
+      console.log('Upserting participant:', body.data.participant.id, body.data.participant.email, 'for event:', body.event);
       const participant = await upsertParticipant(
         program,
         body.data.participant.id,
         body.data.participant.email,
-        body.data.participant // Pass the full participant data for points updates
+        body.data.participant, // Pass the full participant data for points updates
+        body.event // Pass the event type for tracking
       );
       console.log('Upserted participant:', participant.perk_uuid);
 
@@ -240,7 +271,7 @@ export async function POST(
         // In a production system, you'd want to set up the jobs table properly
       }
 
-      console.log(`Enqueued ${body.event} job for participant ${participant.perk_uuid}`);
+      console.log(`✅ Successfully processed ${body.event} for participant ${participant.perk_uuid}`);
 
       return NextResponse.json(
         { 
