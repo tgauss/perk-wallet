@@ -9,7 +9,7 @@ import { createHash } from 'crypto';
 const UpdatePassRequestSchema = z.object({
   points: z.number().optional(),
   tier: z.string().optional(),
-  rewards: z.array(z.record(z.unknown())).optional(),
+  rewards: z.array(z.record(z.string(), z.unknown())).optional(),
 });
 
 function generateDataHash(data: unknown): string {
@@ -20,10 +20,10 @@ function generateDataHash(data: unknown): string {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { perk_uuid: string } }
+  { params }: { params: Promise<{ perk_uuid: string }> }
 ) {
   try {
-    const { perk_uuid } = params;
+    const { perk_uuid } = await params;
     const body = await request.json();
     const updates = UpdatePassRequestSchema.parse(body);
 

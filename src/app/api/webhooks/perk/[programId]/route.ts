@@ -158,10 +158,10 @@ async function enqueueJob(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { programId: string } }
+  { params }: { params: Promise<{ programId: string }> }
 ) {
   try {
-    const { programId } = params;
+    const { programId } = await params;
     const rawBody = await request.text();
     const idemKey = generateIdempotencyKey(rawBody);
 

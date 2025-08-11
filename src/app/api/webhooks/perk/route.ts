@@ -11,7 +11,7 @@ const WebhookEventSchema = z.object({
   type: z.enum(['new_participant', 'points_earned', 'challenge_completed', 'reward_earned']),
   participant_id: z.string(),
   program_id: z.string(),
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
   created_at: z.string(),
 });
 
