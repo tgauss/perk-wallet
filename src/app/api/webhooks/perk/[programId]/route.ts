@@ -149,6 +149,12 @@ async function upsertParticipant(
         last_event_at: new Date().toISOString(),
         event_history: updatedHistory
       };
+      
+      // Update webhook event tracking columns
+      updates.last_webhook_event_type = eventType;
+      updates.last_webhook_event_at = new Date().toISOString();
+      updates.webhook_event_count = (participant.webhook_event_count || 0) + 1;
+      
       needsUpdate = true;
     }
 
@@ -174,39 +180,34 @@ async function upsertParticipant(
   return participant as ParticipantRow;
 }
 
-async function enqueueJob(
+async function recordWebhookEvent(
   idemKey: string,
   program: any,
   perkProgramId: number,
-  event: string,
+  eventType: string,
   participant: ParticipantRow,
   rawBody: PerkWebhookPayload
 ) {
-  const jobPayload = {
-    program_id: program.id,
-    perk_program_id: perkProgramId,
-    event: event,
-    participant: {
-      perk_uuid: participant.perk_uuid,
-      perk_participant_id: participant.perk_participant_id,
-      email: participant.email,
-    },
-    raw: rawBody,
-    idem_key: idemKey, // Store in payload since we can't add column
-  };
-
+  // Record the webhook event with full program context
   const { error } = await supabase
-    .from('jobs')
+    .from('webhook_events')
     .insert({
-      type: 'perk_event',
-      status: 'pending',
-      payload: jobPayload,
+      program_id: program.id,
+      perk_program_id: perkProgramId,
+      event_type: eventType,
+      event_id: idemKey,
+      participant_id: participant.perk_participant_id ? parseInt(participant.perk_participant_id) : null,
+      participant_email: participant.email,
+      participant_uuid: participant.perk_uuid,
+      event_data: rawBody,
     });
 
   if (error) {
-    console.error('Job enqueue error:', error);
-    throw new Error(`Failed to enqueue job: ${error.message}`);
+    console.error('Webhook event recording error:', error);
+    throw new Error(`Failed to record webhook event: ${error.message}`);
   }
+
+  console.log(`📝 Recorded webhook event: ${eventType} for program ${program.name} (${perkProgramId})`);
 }
 
 export async function POST(
@@ -253,10 +254,10 @@ export async function POST(
       );
       console.log('Upserted participant:', participant.perk_uuid);
 
-      // Enqueue job with normalized event
-      console.log('Enqueueing job for event:', body.event);
+      // Record webhook event with full program context
+      console.log('Recording webhook event:', body.event);
       try {
-        await enqueueJob(
+        await recordWebhookEvent(
           idemKey,
           program,
           Number(programId),
@@ -264,11 +265,11 @@ export async function POST(
           participant,
           body
         );
-        console.log('Job enqueued successfully');
-      } catch (jobError) {
-        console.error('Job enqueueing failed, but continuing:', jobError);
-        // Continue processing even if job enqueueing fails
-        // In a production system, you'd want to set up the jobs table properly
+        console.log('Webhook event recorded successfully');
+      } catch (eventError) {
+        console.error('Webhook event recording failed, but continuing:', eventError);
+        // Continue processing even if event recording fails
+        // This ensures webhook still returns success to Perk
       }
 
       console.log(`✅ Successfully processed ${body.event} for participant ${participant.perk_uuid}`);

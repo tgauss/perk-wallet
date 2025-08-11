@@ -20,11 +20,47 @@ export type Database = {
           id: string;
           perk_program_id: number;
           name: string;
+          description: string | null;
           api_key: string;
           webhook_secret: string;
           apple_pass_type_id: string | null;
           google_wallet_class_id: string | null;
           settings: Record<string, any>;
+          branding_fonts: {
+            header_font: string;
+            body_font: string;
+          };
+          branding_colors: {
+            brand_color?: string;
+            brand_text_color?: string;
+            secondary_color?: string;
+            secondary_text_color?: string;
+            body_background_color?: string;
+            body_content_color?: string;
+            header_background_color?: string;
+            header_font_color?: string;
+            hero_font_color?: string;
+            challenge_tile_background_color?: string;
+            reward_tile_background_color?: string;
+            footer_background_color?: string;
+            footer_font_color?: string;
+          };
+          branding_assets: {
+            favicon_url?: string;
+            logo_url?: string;
+            footer_logo_url?: string;
+            overlay_image_url?: string;
+            hero_title?: string;
+            hero_description?: string;
+            hero_background_image_url?: string;
+            badge_background_image_url?: string;
+          };
+          branding_borders: {
+            button_border_radius: string;
+            input_border_radius: string;
+            tiles_border_radius: string;
+            cards_border_radius: string;
+          };
           created_at: string;
           updated_at: string;
         };
@@ -59,6 +95,9 @@ export type Database = {
           status: string | null;
           profile_attributes: Record<string, any>;
           last_sync_at: string | null;
+          last_webhook_event_type: string | null;
+          last_webhook_event_at: string | null;
+          webhook_event_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -104,9 +143,14 @@ export type Database = {
       webhook_events: {
         Row: {
           id: string;
-          event_id: string;
+          program_id: string;
+          perk_program_id: number;
           event_type: string;
-          payload: Record<string, any>;
+          event_id: string;
+          participant_id: number | null;
+          participant_email: string | null;
+          participant_uuid: string | null;
+          event_data: Record<string, any>;
           processed_at: string;
           created_at: string;
         };
