@@ -24,14 +24,14 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   created_at TIMESTAMPTZ DEFAULT now(),
   
   -- Ensure idempotency per program
-  UNIQUE(program_id, event_id),
-  
-  -- Indexes for performance
-  INDEX idx_webhook_events_program (program_id),
-  INDEX idx_webhook_events_perk_program (perk_program_id),
-  INDEX idx_webhook_events_type (event_type),
-  INDEX idx_webhook_events_participant (participant_id)
+  UNIQUE(program_id, event_id)
 );
+
+-- Create indexes for webhook_events table
+CREATE INDEX IF NOT EXISTS idx_webhook_events_program ON webhook_events(program_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_events_perk_program ON webhook_events(perk_program_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_events_type ON webhook_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_webhook_events_participant ON webhook_events(participant_id);
 
 -- Add program_id indexes to existing tables for better performance
 CREATE INDEX IF NOT EXISTS idx_participants_program_id ON participants(program_id);
