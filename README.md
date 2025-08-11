@@ -1,13 +1,16 @@
 # Perk Wallet MVP
 
-A Next.js application for issuing and managing Apple Wallet and Google Wallet passes for Perk loyalty programs.
+A Next.js application for issuing and managing Apple Wallet and Google Wallet passes for Perk loyalty programs with full multi-program support.
 
 ## Features
 
+- **Multi-Program Architecture**: Complete data isolation and branding per program
 - **Dual Pass Issuance**: Issues both Loyalty and My Rewards passes grouped together
 - **QR Code Generation**: Signed QR codes with HMAC-SHA256 and 180-second TTL
 - **Universal Magic Links**: `https://pass.perk.ooo/w/{programId}/{perkUuid}`
-- **Webhook Processing**: Handles Perk events with idempotency
+- **Per-Program Webhooks**: Individual webhook endpoints with comprehensive event tracking
+- **Program Branding**: Customizable fonts, colors, assets, and borders per program
+- **Event Tracking**: Complete audit trail of all webhook events with program context
 - **API Resilience**: Automatic retry with exponential backoff and 429 rate limit handling
 - **Real-time Sync**: Updates passes within 60 seconds (p95) of Perk events
 
@@ -59,13 +62,15 @@ Required environment variables:
 
 ### 3. Database Setup
 
-Run the Supabase migration to create the required tables:
+Run the Supabase migrations to create the required tables:
 
 ```bash
 npx supabase db push
 ```
 
-Or manually run the SQL in `supabase/migrations/001_initial_schema.sql`
+Or manually run the SQL migrations:
+- `supabase/migrations/001_initial_schema.sql` - Core schema
+- `supabase/migrations/002_multi_program_support.sql` - Multi-program features
 
 ### 4. Apple Wallet Setup
 
@@ -93,7 +98,8 @@ Visit http://localhost:3000
 ## API Endpoints
 
 ### Webhooks
-- `POST /api/webhooks/perk` - Receives Perk webhook events
+- `POST /api/webhooks/perk/{programId}` - Per-program webhook endpoints
+- `GET /api/debug` - Database status and program statistics
 
 ### Pass Management
 - `POST /api/passes/issue` - Issue new passes for a participant
@@ -140,9 +146,58 @@ vercel --prod
 
 Ensure Supabase database is accessible from your deployment environment.
 
+## Multi-Program Architecture
+
+### Program Isolation
+
+Each program operates independently with:
+- Separate participant databases
+- Individual webhook endpoints
+- Isolated event tracking
+- Custom branding configuration
+
+### Program Branding
+
+Programs support comprehensive branding configuration:
+
+```typescript
+{
+  branding_fonts: {
+    header_font: "Inter",
+    body_font: "Inter"
+  },
+  branding_colors: {
+    brand_color: "#000000",
+    brand_text_color: "#FFFFFF",
+    secondary_color: "#666666",
+    // ... additional color options
+  },
+  branding_assets: {
+    logo_url: "https://example.com/logo.png",
+    hero_background_image_url: "https://example.com/hero.jpg",
+    // ... additional assets
+  },
+  branding_borders: {
+    button_border_radius: "Medium",
+    input_border_radius: "Medium",
+    tiles_border_radius: "Medium",
+    cards_border_radius: "Medium"
+  }
+}
+```
+
+### Event Tracking
+
+All webhook events are tracked in the `webhook_events` table with:
+- Full program context
+- Participant association
+- Event type classification
+- Complete event data payload
+- Idempotency keys for duplicate prevention
+
 ## Webhook Events
 
-The system handles these Perk webhook events via per-program endpoints:
+The system handles Perk webhook events via per-program endpoints:
 
 ### Webhook Endpoint
 
@@ -150,43 +205,44 @@ The system handles these Perk webhook events via per-program endpoints:
 POST /api/webhooks/perk/{programId}
 ```
 
-Where `{programId}` is the numeric Perk program ID.
+Where `{programId}` is the numeric Perk program ID (e.g., 44 for Buckeye Nation Rewards).
 
 ### Supported Events
 
 - `participant_created`: Creates participant record and issues passes
-- `participant_points_updated`: Syncs points and updates loyalty pass
+- `participant_points_updated`: Syncs points and updates loyalty pass  
 - `challenge_completed`: Refreshes participant data and awards points
 - `reward_earned`: Updates My Rewards pass and sends notification
+- Custom events: All event types are tracked and logged
 
 ### Webhook Examples
 
-#### Participant Created
+#### Live Production Example (Buckeye Nation Rewards)
 ```bash
-curl -i -X POST http://localhost:3000/api/webhooks/perk/1000026 \
+curl -i -X POST https://pass.perk.ooo/api/webhooks/perk/44 \
   -H "Content-Type: application/json" \
-  -d '{"event":"participant_created","data":{"participant":{"id":10262159,"email":"test@example.com"}}}'
+  -d '{"event":"participant_points_updated","data":{"participant":{"id":140699,"email":"user@example.com","points":1350,"unused_points":1350}}}'
 ```
 
-#### Participant Points Updated
+#### Participant Created
 ```bash
-curl -i -X POST http://localhost:3000/api/webhooks/perk/1000026 \
+curl -i -X POST https://pass.perk.ooo/api/webhooks/perk/44 \
   -H "Content-Type: application/json" \
-  -d '{"event":"participant_points_updated","data":{"participant":{"id":10262159,"email":"test@example.com","points":700}}}'
+  -d '{"event":"participant_created","data":{"participant":{"id":140700,"email":"newuser@example.com","points":0}}}'
 ```
 
 #### Challenge Completed
 ```bash
-curl -i -X POST http://localhost:3000/api/webhooks/perk/1000026 \
+curl -i -X POST https://pass.perk.ooo/api/webhooks/perk/44 \
   -H "Content-Type: application/json" \
-  -d '{"event":"challenge_completed","data":{"participant":{"id":10262159,"email":"test@example.com"},"challenge":{"id":10001491,"points":200,"challenge_type":"signup"}}}'
+  -d '{"event":"challenge_completed","data":{"participant":{"id":140699,"email":"user@example.com","points":1550},"challenge":{"id":10001491,"points":200,"challenge_type":"signup"}}}'
 ```
 
 #### Reward Earned
 ```bash
-curl -i -X POST http://localhost:3000/api/webhooks/perk/1000026 \
+curl -i -X POST https://pass.perk.ooo/api/webhooks/perk/44 \
   -H "Content-Type: application/json" \
-  -d '{"event":"reward_earned","data":{"participant":{"id":247076,"email":"test@example.com"},"reward":{"id":669,"name":"character blanket","selection":"redeem"}}}'
+  -d '{"event":"reward_earned","data":{"participant":{"id":140699,"email":"user@example.com"},"reward":{"id":669,"name":"character blanket","selection":"redeem"}}}'
 ```
 
 ## Pass Structure
@@ -213,10 +269,26 @@ curl -i -X POST http://localhost:3000/api/webhooks/perk/1000026 \
 ## Monitoring
 
 Key metrics to monitor:
-- Webhook processing latency
+- Webhook processing latency per program
 - Pass update success rate
 - API rate limit hits
 - QR code verification failures
+- Program statistics via `/api/debug` endpoint
+
+### Debug Endpoint
+
+The `/api/debug` endpoint provides comprehensive system status:
+
+```bash
+curl https://pass.perk.ooo/api/debug
+```
+
+Returns:
+- Database connection status
+- Program configurations with branding
+- Recent participants and webhook events
+- Program statistics (participant count, event count, last activity)
+- Multi-program status confirmation
 
 ## Support
 
