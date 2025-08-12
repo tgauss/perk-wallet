@@ -4,6 +4,7 @@ import { getEmulatedIdentity, hasEmulatorSecret } from '@/lib/auth-emulator'
 import { AdminSidebar } from '@/components/admin/admin-sidebar'
 import { AdminTopBar } from '@/components/admin/admin-top-bar'
 import { EmulatorWarning } from '@/components/admin/emulator-warning'
+import VersionIndicator from '@/components/version-indicator'
 
 interface AdminLayoutProps {
   children: ReactNode
@@ -41,6 +42,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </main>
       </div>
+      
+      {/* Version indicator */}
+      <VersionIndicator />
     </div>
   )
 }

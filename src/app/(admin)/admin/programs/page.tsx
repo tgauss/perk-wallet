@@ -16,6 +16,14 @@ export default async function ProgramsPage() {
   
   const programs = await getAdminPrograms()
 
+  // Debug log (will be visible in server console)
+  console.log('Programs Page Debug:', {
+    role: identity.role,
+    isSuperAdmin: identity.isSuperAdmin,
+    canViewAll,
+    programsCount: programs.length
+  })
+
   return (
     <div className="p-6 space-y-6">
       {/* Page Header */}
@@ -29,14 +37,20 @@ export default async function ProgramsPage() {
             }
           </p>
         </div>
-        {canViewAll && (
-          <Button asChild>
-            <Link href="/admin/programs/new">
-              <Plus className="w-4 h-4 mr-2" />
-              New Program
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center space-x-2">
+          {/* Debug info badge */}
+          <Badge variant="outline" className="text-xs">
+            Role: {identity.role} | Super: {identity.isSuperAdmin ? 'Yes' : 'No'} | ViewAll: {canViewAll ? 'Yes' : 'No'}
+          </Badge>
+          {canViewAll && (
+            <Button asChild>
+              <Link href="/admin/programs/new">
+                <Plus className="w-4 h-4 mr-2" />
+                New Program
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Programs List */}
