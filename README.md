@@ -406,3 +406,6 @@ For issues and questions:
 - GitHub Issues: [your-repo/issues]
 - Documentation: [docs-link]
 - Perk API Docs: https://perk.studio/docs
+
+---
+Last updated: 2025-08-12 - Added version indicator and New Program button fixes
