@@ -1,3 +1,18 @@
+/**
+ * Permission System for Admin Interface
+ * 
+ * Implements RBAC with 5 roles and program-scoped permissions.
+ * All permission checks are performed server-side for security.
+ * 
+ * Roles hierarchy:
+ * - super_admin: Full system access
+ * - program_admin: Full program access
+ * - program_editor: Edit access, no secrets
+ * - program_viewer: Read-only access
+ * - support: Limited write access
+ * 
+ * @module perm
+ */
 import { type ReactNode } from 'react'
 import { type Role, type EmulatedIdentity, getEmulatedIdentity } from './auth-emulator'
 import { headers } from 'next/headers'

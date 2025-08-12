@@ -1,3 +1,11 @@
+/**
+ * Auth Emulator for Admin Interface
+ * 
+ * Provides JWT-based role emulation for testing admin permissions.
+ * Security: Requires APP_EMULATOR_SECRET in production.
+ * 
+ * @module auth-emulator
+ */
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
@@ -5,8 +13,8 @@ export type Role = 'super_admin' | 'program_admin' | 'program_editor' | 'program
 
 export interface EmulatedIdentity {
   role: Role
-  programId?: string
-  email?: string
+  programId?: string  // Required for non-super_admin roles
+  email?: string      // Optional for audit trails
   isSuperAdmin: boolean
 }
 

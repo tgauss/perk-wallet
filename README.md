@@ -407,5 +407,22 @@ For issues and questions:
 - Documentation: [docs-link]
 - Perk API Docs: https://perk.studio/docs
 
+## Version History
+
+### Latest: v0.2.0 (2025-08-12)
+- Complete Admin Interface with Role-Based Access Control
+- Program Management System with API validation
+- Status management (draft/active/inactive)
+- Real-time Supabase data integration
+- Version indicator for deployment tracking
+- 7 admin pages: Dashboard, Programs, Templates, Participants, Passes, Jobs, Webhooks
+- Multi-tenant architecture fully implemented
+
+### v0.1.0 (Initial Release)
+- Core pass issuance functionality
+- Webhook processing
+- QR code generation
+- Magic links
+
 ---
-Last updated: 2025-08-12 - Added version indicator and New Program button fixes
+Last updated: 2025-08-12 - See CLAUDE.md for detailed implementation notes
