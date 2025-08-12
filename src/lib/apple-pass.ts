@@ -2,17 +2,17 @@ import { PKPass } from 'passkit-generator';
 import { randomBytes } from 'crypto';
 import { config } from './config';
 import { qrSigner } from './qr-code';
+import { ParticipantSnapshot } from './perk/normalize';
 
 export interface ApplePassData {
   programId: string;
   perkUuid: string;
-  participantName?: string;
-  points: number;
-  tier?: string;
+  participant: ParticipantSnapshot;
   passType: 'loyalty' | 'rewards';
   template: any;
   serialNumber?: string;
   authToken?: string;
+  pointsDisplay?: 'points' | 'unused_points'; // Which points field to display
 }
 
 export class ApplePassBuilder {
@@ -81,21 +81,21 @@ export class ApplePassBuilder {
             {
               key: 'points',
               label: 'POINTS',
-              value: data.points,
+              value: data.pointsDisplay === 'points' ? data.participant.points : data.participant.unused_points,
             },
           ],
           secondaryFields: [
             {
               key: 'tier',
               label: 'TIER',
-              value: data.tier || 'Member',
+              value: data.participant.tier || data.participant.status || 'Member',
             },
           ],
           auxiliaryFields: [
             {
               key: 'member',
               label: 'MEMBER',
-              value: data.participantName || 'Member',
+              value: [data.participant.fname, data.participant.lname].filter(Boolean).join(' ') || data.participant.email || 'Member',
             },
           ],
           backFields: [
@@ -120,7 +120,7 @@ export class ApplePassBuilder {
             {
               key: 'rewards',
               label: 'REWARDS',
-              value: `${data.points} Available`,
+              value: `${data.pointsDisplay === 'points' ? data.participant.points : data.participant.unused_points} Available`,
             },
           ],
           secondaryFields: [
@@ -134,7 +134,7 @@ export class ApplePassBuilder {
             {
               key: 'member',
               label: 'MEMBER',
-              value: data.participantName || 'Member',
+              value: [data.participant.fname, data.participant.lname].filter(Boolean).join(' ') || data.participant.email || 'Member',
             },
           ],
           backFields: [

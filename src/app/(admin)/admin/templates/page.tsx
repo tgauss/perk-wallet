@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { requireEmulatedIdentity } from '@/lib/auth-emulator'
 import { canManageTemplates } from '@/lib/perm'
 import { getAdminTemplates } from '@/lib/admin-service'
-import { FileTemplate, Plus } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
 import TemplateEditor from './template-editor'
 
 export default async function TemplatesPage() {
@@ -37,7 +37,7 @@ export default async function TemplatesPage() {
         <Card>
           <CardContent className="p-12">
             <div className="text-center space-y-4">
-              <FileTemplate className="h-12 w-12 text-muted-foreground mx-auto" />
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto" />
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">No Templates Found</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
@@ -55,8 +55,8 @@ export default async function TemplatesPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center space-x-2">
-                      <FileTemplate className="h-5 w-5" />
-                      <span>{template.pass_type} Template</span>
+                      <FileText className="h-5 w-5" />
+                      <span>{template.pass_kind} Template</span>
                       <Badge variant="outline">v{template.version}</Badge>
                       {template.is_active && (
                         <Badge variant="secondary">Active</Badge>

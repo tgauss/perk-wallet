@@ -2,19 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash, randomUUID } from 'crypto';
 import { supabase } from '@/lib/supabase';
 import { PerkWebhookPayloadSchema, PerkWebhookPayload } from '@/lib/perk-webhook-schemas';
+import { toSnapshot, ParticipantSnapshot } from '@/lib/perk/normalize';
+import { PerkClient } from '@/lib/perk-client';
+import { queueNotificationEvent } from '@/lib/notify';
 
-interface ParticipantRow {
-  perk_uuid: string;
-  program_id: string;
-  perk_participant_id: string;
-  email: string;
-  status: string;
-  points: number;
-  unused_points: number;
-  profile_attributes: Record<string, unknown>;
-  tag_list: string[];
-  updated_at: string;
-}
 
 function generateIdempotencyKey(rawBody: string): string {
   return createHash('sha256').update(rawBody).digest('hex');
@@ -44,8 +35,24 @@ async function upsertParticipant(
   email: string,
   eventData?: any,
   eventType?: string
-): Promise<ParticipantRow> {
+): Promise<ParticipantSnapshot> {
   console.log('Looking for participant:', perkParticipantId, 'in program:', program.id);
+
+  // Re-fetch participant from Perk API to get full data
+  const perkClient = new PerkClient(program.api_key);
+  let perkParticipant;
+  try {
+    perkParticipant = await perkClient.getParticipantById(String(perkParticipantId));
+    if (!perkParticipant) {
+      console.error('Participant not found in Perk API:', perkParticipantId);
+      // Use webhook data as fallback
+      perkParticipant = eventData;
+    }
+  } catch (error) {
+    console.error('Failed to fetch participant from Perk:', error);
+    // Use webhook data as fallback
+    perkParticipant = eventData;
+  }
 
   // Try to find by perk_participant_id first
   let { data: participant, error: findError } = await supabase
@@ -76,6 +83,9 @@ async function upsertParticipant(
     
     console.log(`Creating new participant with perk_uuid: ${perkUuid} for event: ${eventType}`);
 
+    // Create participant snapshot
+    const snapshot = toSnapshot(perkParticipant, perkUuid);
+
     // Create event tracking attributes
     const eventTracking = {
       last_event_type: eventType,
@@ -83,18 +93,22 @@ async function upsertParticipant(
       event_history: [{ type: eventType, timestamp: new Date().toISOString() }]
     };
 
-    // Create new participant
+    // Create new participant with all fields from snapshot
     const { data: newParticipant, error: insertError } = await supabase
       .from('participants')
       .insert({
         perk_uuid: perkUuid,
         program_id: program.id,
         perk_participant_id: String(perkParticipantId), // Convert to string
-        email: email,
-        points: eventData?.points || 0,
-        unused_points: eventData?.unused_points || 0,
-        status: 'active',
-        profile_attributes: eventTracking,
+        email: snapshot.email || email,
+        points: snapshot.points,
+        unused_points: snapshot.unused_points,
+        status: snapshot.status || 'active',
+        tier: snapshot.tier,
+        fname: snapshot.fname,
+        lname: snapshot.lname,
+        tag_list: snapshot.tag_list,
+        profile_attributes: { ...snapshot.profile, ...eventTracking },
       })
       .select()
       .single();
@@ -107,30 +121,22 @@ async function upsertParticipant(
 
     participant = newParticipant;
   } else {
-    // Update existing participant - check if we need to update ID or points
-    const updates: any = {};
-    let needsUpdate = false;
-
-    if (participant.perk_participant_id !== String(perkParticipantId)) {
-      console.log('Updating participant perk_participant_id');
-      updates.perk_participant_id = String(perkParticipantId);
-      updates.email = email;
-      needsUpdate = true;
-    }
-
-    // Update points if provided in event data
-    if (eventData && typeof eventData.points === 'number') {
-      console.log('Updating participant points from', participant.points, 'to', eventData.points);
-      updates.points = eventData.points;
-      needsUpdate = true;
-    }
-
-    // Update unused_points if provided in event data
-    if (eventData && typeof eventData.unused_points === 'number') {
-      console.log('Updating participant unused_points from', participant.unused_points, 'to', eventData.unused_points);
-      updates.unused_points = eventData.unused_points;
-      needsUpdate = true;
-    }
+    // Create participant snapshot with latest data
+    const snapshot = toSnapshot(perkParticipant, participant.perk_uuid);
+    
+    // Update existing participant with all fields from snapshot
+    const updates: any = {
+      perk_participant_id: String(perkParticipantId),
+      email: snapshot.email || email,
+      points: snapshot.points,
+      unused_points: snapshot.unused_points,
+      status: snapshot.status,
+      tier: snapshot.tier,
+      fname: snapshot.fname,
+      lname: snapshot.lname,
+      tag_list: snapshot.tag_list,
+    };
+    let needsUpdate = true;
 
     // Always update event tracking for existing participants
     if (eventType) {
@@ -144,6 +150,7 @@ async function upsertParticipant(
       ];
 
       updates.profile_attributes = {
+        ...snapshot.profile,
         ...existingAttributes,
         last_event_type: eventType,
         last_event_at: new Date().toISOString(),
@@ -177,7 +184,8 @@ async function upsertParticipant(
     }
   }
 
-  return participant as ParticipantRow;
+  // Return normalized snapshot
+  return toSnapshot(perkParticipant, participant.perk_uuid);
 }
 
 async function recordWebhookEvent(
@@ -185,7 +193,7 @@ async function recordWebhookEvent(
   program: any,
   perkProgramId: number,
   eventType: string,
-  participant: ParticipantRow,
+  participant: ParticipantSnapshot,
   rawBody: PerkWebhookPayload
 ) {
   // Record the webhook event with full program context
@@ -196,7 +204,7 @@ async function recordWebhookEvent(
       perk_program_id: perkProgramId,
       event_type: eventType,
       event_id: idemKey,
-      participant_id: participant.perk_participant_id ? parseInt(participant.perk_participant_id) : null,
+      participant_id: participant.perk_participant_id,
       participant_email: participant.email,
       participant_uuid: participant.perk_uuid,
       event_data: rawBody,
@@ -253,6 +261,54 @@ export async function POST(
         body.event // Pass the event type for tracking
       );
       console.log('Upserted participant:', participant.perk_uuid);
+
+      // Queue notification for points_updated events
+      if (body.event === 'participant_points_updated') {
+        try {
+          const pointsDisplay = program.settings?.points_display || 'unused_points';
+          
+          // Get previous points from existing participant data
+          const { data: prevParticipant } = await supabase
+            .from('participants')
+            .select('points, unused_points')
+            .eq('perk_uuid', participant.perk_uuid)
+            .single();
+          
+          const prevPoints = prevParticipant?.[pointsDisplay === 'points' ? 'points' : 'unused_points'] || 0;
+          const newPoints = pointsDisplay === 'points' ? participant.points : participant.unused_points;
+          
+          await queueNotificationEvent({
+            id: randomUUID(),
+            program_id: program.id,
+            participant_uuid: participant.perk_uuid,
+            rule: 'points_updated',
+            data: {
+              ...(pointsDisplay === 'points' 
+                ? {
+                    points_before: prevPoints,
+                    points_after: newPoints,
+                  }
+                : {
+                    unused_points_before: prevPoints,
+                    unused_points_after: newPoints,
+                  }
+              ),
+              webhook_event: body.event,
+              participant_data: body.data.participant,
+            },
+            timestamp: new Date().toISOString(),
+          }, {
+            merge_window_sec: 120,
+            throttle_sec: 300,
+            points_display: pointsDisplay,
+          });
+          
+          console.log(`📧 Queued notification for points update: ${prevPoints} → ${newPoints}`);
+        } catch (notifyError) {
+          console.error('Failed to queue notification:', notifyError);
+          // Continue processing even if notification fails
+        }
+      }
 
       // Record webhook event with full program context
       console.log('Recording webhook event:', body.event);

@@ -5,6 +5,85 @@ All notable changes to the Perk Wallet project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-08-12
+
+### Fixed
+- **Templates Schema**: Standardized `templates.pass_type` → `pass_kind` for consistency with `passes` table
+- **Admin Templates**: Updated JSX bindings in template pages to use `pass_kind`
+- **Pass Issue Route**: Fixed template filtering to use `pass_kind` field
+
+### Changed
+- **Database Schema**: `templates` table now uses `pass_kind: 'loyalty' | 'rewards'`
+- **TypeScript Types**: Updated Supabase types to reflect schema changes
+
+### Added
+- **Enhanced Documentation**: Updated CLAUDE.md with comprehensive feature mapping
+- **Database Schema Documentation**: Detailed mapping of all table changes and new fields
+- **File Structure Documentation**: Complete reference of new /src/lib/perk/ organization
+- **CHANGELOG.md**: Proper changelog tracking for all releases
+
+### Developer Notes
+- All builds passing with no TypeScript errors
+- Schema changes maintain backward compatibility via consistent field naming
+- 4 files changed total: supabase.ts, templates pages, and pass issue route
+
+---
+
+## [0.3.0] - 2025-08-12
+
+### Added
+- **Participant Data Alignment System**
+  - `/src/lib/perk/schemas.ts`: Comprehensive Zod validation for Perk API data
+  - `/src/lib/perk/normalize.ts`: ParticipantSnapshot interface and normalization functions
+  - Tier fallback logic (tier → status → null)
+  - Support for unused_points, fname, lname, tag_list fields
+
+- **Merge Tag System**
+  - `/src/lib/mergeTags.ts`: Dynamic template content replacement
+  - 16+ supported tags: {points}, {unused_points}, {tier}, {profile.*}, etc.
+  - Tag validation and unknown tag detection
+  - Template validation with warnings
+
+- **Notification System with Intelligent Merging**
+  - `/src/lib/notify.ts`: Event buffering and merging system
+  - `/src/lib/notify-flush.ts`: Background notification flushing
+  - 120-second merge window for rapid point updates
+  - 300-second throttling per participant+rule
+  - Points delta calculation using program settings
+
+- **Points Display Configuration**
+  - Per-program setting: `points_display: 'points' | 'unused_points'`
+  - Admin UI in program settings for configuration
+  - Default to 'unused_points' (available balance)
+  - Applied across pass builders and notifications
+
+- **Admin Testing Tools**
+  - Simulate Points Burst feature in participant details (`/admin/participants/[perk_uuid]`)
+  - Development-only testing interface
+  - Configurable event count, points, and duration
+  - Real-time job monitoring integration
+  - Requires super_admin or program_admin role
+
+- **Enhanced Database Schema**
+  - `participants` table: Added unused_points, fname, lname, tag_list fields
+  - `programs.settings`: Added points_display configuration
+  - Complete Perk data alignment capabilities
+
+### Changed
+- **Webhook Processing**: Now uses ParticipantSnapshot for consistent data handling
+- **Pass Builders**: Apple and Google builders updated to use ParticipantSnapshot interface
+- **Pass Issue Route**: Enhanced with fromDatabaseRow normalization
+- **Database Updates**: Enhanced participants table with Perk-aligned fields
+
+### Added Tests
+- **Unit Tests**: Comprehensive test coverage for new features
+- `/src/lib/__tests__/perk-normalize.test.ts`: ParticipantSnapshot normalization tests
+- `/src/lib/__tests__/merge-tags.test.ts`: Tag resolution and validation tests
+- `/src/lib/__tests__/notify.test.ts`: Notification merging and throttling tests
+- `tests/fixtures/perk-participant-bluejackets.json`: Sample test data
+
+---
+
 ## [0.2.0] - 2025-08-12
 
 ### Added

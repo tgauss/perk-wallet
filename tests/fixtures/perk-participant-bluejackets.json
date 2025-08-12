@@ -1,0 +1,24 @@
+{
+  "id": 12345,
+  "email": "fan@bluejackets.com",
+  "first_name": "John",
+  "last_name": "Hockey",
+  "points": 250,
+  "unused_points": 125,
+  "status": "active",
+  "tier": "Season Ticket Holder",
+  "tag_list": ["vip", "season_ticket", "premium"],
+  "profile_attributes": {
+    "seat_section": "110",
+    "favorite_player": "Johnny Gaudreau",
+    "years_as_fan": 8,
+    "merchandise_size": "L",
+    "phone": "+1-614-555-0123",
+    "birthday": "1985-03-15",
+    "preferred_contact": "email",
+    "jersey_number": "13",
+    "concession_preferences": ["beer", "nachos", "hot_dog"]
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-08-12T15:45:00Z"
+}

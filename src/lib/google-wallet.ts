@@ -3,16 +3,16 @@ import { GoogleAuth } from 'google-auth-library';
 import { randomBytes } from 'crypto';
 import { config } from './config';
 import { qrSigner } from './qr-code';
+import { ParticipantSnapshot } from './perk/normalize';
 
 export interface GoogleWalletData {
   programId: string;
   perkUuid: string;
-  participantName?: string;
-  points: number;
-  tier?: string;
+  participant: ParticipantSnapshot;
   passType: 'loyalty' | 'rewards';
   template: any;
   objectId?: string;
+  pointsDisplay?: 'points' | 'unused_points'; // Which points field to display
 }
 
 export class GoogleWalletBuilder {

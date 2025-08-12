@@ -3,7 +3,7 @@
 ## Last Updated: 2025-08-12
 
 ### Session Summary
-Built a comprehensive Admin interface with role-based access control (RBAC), program management system, and various admin tools for the Perk Wallet application.
+Built a comprehensive Admin interface with role-based access control (RBAC), program management system, participant data alignment with Perk API, notification system with merging/throttling, and comprehensive admin tools for the Perk Wallet application.
 
 ## Major Features Implemented
 
@@ -80,6 +80,44 @@ Built a comprehensive Admin interface with role-based access control (RBAC), pro
 - Fixed position bottom-right
 - Helps verify deployment status
 
+### 5. Participant Data Alignment System
+- **Location**: `/src/lib/perk/*`
+- **Purpose**: Normalize Perk participant data into consistent snapshots
+- **Key Features**:
+  - Complete Perk API schema validation with Zod
+  - ParticipantSnapshot interface for internal consistency
+  - Tier fallback to status when tier is null
+  - Points display configuration (unused_points vs points)
+  - Database normalization with fromDatabaseRow()
+
+### 6. Merge Tag System
+- **Location**: `/src/lib/mergeTags.ts`
+- **Purpose**: Dynamic template content replacement
+- **Supported Tags**: 16 total including:
+  - `{points}`, `{unused_points}`, `{tier}`, `{status}`
+  - `{email}`, `{fname}`, `{lname}`, `{full_name}`
+  - `{program_name}`, `{profile.*}` (dynamic attributes)
+  - `{points_delta}`, `{new_points}` (notification-specific)
+- **Features**: Tag validation, unknown tag detection, template warnings
+
+### 7. Notification System with Merging & Throttling
+- **Location**: `/src/lib/notify.ts`, `/src/lib/notify-flush.ts`
+- **Purpose**: Intelligent notification delivery to prevent spam
+- **Key Features**:
+  - 120-second merge window for rapid point updates
+  - 300-second throttling per participant+rule
+  - Points delta calculation using program settings
+  - In-memory buffering with automatic flush
+  - Support for multiple notification rules (manual, points_updated, reward_earned, location_enter)
+
+### 8. Admin Testing Tools
+- **Simulate Points Burst** (`/admin/participants/[perk_uuid]`)
+  - Development-only testing interface
+  - Configurable event count, points per event, duration
+  - Synthetic notification events without affecting Perk balances
+  - Real-time monitoring via Jobs page integration
+  - Requires super_admin or program_admin role
+
 ## Technical Implementation Details
 
 ### Database Schema Updates
@@ -87,8 +125,30 @@ Built a comprehensive Admin interface with role-based access control (RBAC), pro
 -- Added to programs table via settings JSONB column
 settings: {
   status: 'draft' | 'active' | 'inactive',
-  webhook_secret: string (removed in latest update),
-  // other settings
+  points_display: 'points' | 'unused_points' (default: 'unused_points'),
+  // other program-specific settings
+}
+
+-- Enhanced participants table with Perk alignment
+participants: {
+  perk_participant_id: number,
+  perk_uuid: string,
+  email: string,
+  points: number,
+  unused_points: number,  -- NEW: Available balance for redemption
+  tier: string | null,
+  status: string | null,
+  fname: string | null,   -- NEW: First name
+  lname: string | null,   -- NEW: Last name
+  tag_list: string[],     -- NEW: Participant tags
+  profile_attributes: Record<string, any>,
+  // ... existing webhook tracking fields
+}
+
+-- Templates table field standardization
+templates: {
+  pass_kind: 'loyalty' | 'rewards'  -- Changed from pass_type for consistency
+  // ... other fields unchanged
 }
 ```
 
@@ -113,6 +173,29 @@ settings: {
 - Perk API integration
 - API key validation
 - Program data fetching
+
+#### `/src/lib/perk/schemas.ts`
+- Comprehensive Zod schemas for Perk participant data
+- Validation for both full API responses and webhook payloads
+- Type-safe parsing with error handling
+
+#### `/src/lib/perk/normalize.ts`
+- ParticipantSnapshot interface definition
+- Data normalization functions (toSnapshot, fromDatabaseRow)
+- Tier fallback logic and data consistency
+
+#### `/src/lib/mergeTags.ts`
+- Complete merge tag system for templates
+- Tag resolution, replacement, and validation
+- Support for 16+ dynamic content tags
+- Unknown tag detection and warnings
+
+#### `/src/lib/notify.ts` & `/src/lib/notify-flush.ts`
+- Intelligent notification system with buffering
+- Event merging within configurable time windows
+- Throttling to prevent notification spam
+- Support for multiple notification rules
+- Points delta calculation using program settings
 
 ### Security Features
 - Server-side permission checks on all actions
@@ -199,7 +282,19 @@ APP_EMULATOR_SECRET=your-secure-secret-here
 
 ## Recent Changes Log
 
-### 2025-08-12 Session
+### 2025-08-12 Session - Part 2: Participant Data Alignment & Notifications
+- ✅ **Perk Data Alignment**: Created comprehensive Perk participant schemas and normalization
+- ✅ **ParticipantSnapshot Interface**: Unified data model with tier fallback logic
+- ✅ **Points Display Configuration**: Per-program setting for unused_points vs total points
+- ✅ **Merge Tag System**: 16+ dynamic content tags with validation and error detection
+- ✅ **Notification System**: Intelligent merging (120s window) and throttling (300s)
+- ✅ **Admin Testing Tools**: Simulate points burst feature for development testing
+- ✅ **Database Schema Updates**: Enhanced participants table, templates.pass_kind standardization
+- ✅ **Webhook Integration**: Auto-queue notifications for points_updated events
+- ✅ **Pass Builder Updates**: Use ParticipantSnapshot interface across Apple/Google builders
+- ✅ **Comprehensive Testing**: Unit tests for normalization, merge tags, and notifications
+
+### 2025-08-12 Session - Part 1: Admin Interface & RBAC
 - ✅ Built complete admin interface with role emulator
 - ✅ Implemented RBAC with 5 roles
 - ✅ Created 7 admin pages (dashboard, programs, templates, etc.)
@@ -248,7 +343,13 @@ APP_EMULATOR_SECRET=your-secure-secret-here
 ├── admin-service.ts  # Data fetching
 ├── admin-actions.ts  # Server actions
 ├── program-utils.ts  # Utilities
-└── perk-api.ts       # Perk integration
+├── perk-api.ts       # Perk integration
+├── perk/             # Perk data alignment
+│   ├── schemas.ts    # Zod validation schemas
+│   └── normalize.ts  # ParticipantSnapshot interface
+├── mergeTags.ts      # Template merge tag system
+├── notify.ts         # Notification system
+└── notify-flush.ts   # Notification flushing
 
 /src/components/
 ├── admin/            # Admin UI components

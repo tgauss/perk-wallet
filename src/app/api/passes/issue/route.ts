@@ -5,6 +5,7 @@ import { ApplePassBuilder } from '@/lib/apple-pass';
 import { GoogleWalletBuilder } from '@/lib/google-wallet';
 import { PerkClient } from '@/lib/perk-client';
 import { createHash } from 'crypto';
+import { fromDatabaseRow } from '@/lib/perk/normalize';
 
 const IssuePassRequestSchema = z.object({
   perk_uuid: z.string(),
@@ -86,29 +87,34 @@ export async function POST(request: NextRequest) {
       .eq('program_id', program.id)
       .eq('is_active', true);
 
-    const loyaltyTemplate = templates?.find(t => t.pass_type === 'loyalty');
-    const rewardsTemplate = templates?.find(t => t.pass_type === 'rewards');
+    const loyaltyTemplate = templates?.find(t => t.pass_kind === 'loyalty');
+    const rewardsTemplate = templates?.find(t => t.pass_kind === 'rewards');
 
     const applePassBuilder = new ApplePassBuilder();
     const googleWalletBuilder = new GoogleWalletBuilder();
 
+    // Create participant snapshot from database row
+    const participantSnapshot = fromDatabaseRow(participant);
+    
+    // Get points display preference from program settings
+    const pointsDisplay = program.settings?.points_display || 'unused_points';
+
     const loyaltyPassData = {
       programId: program.perk_program_id,
       perkUuid: perk_uuid,
-      participantName: participant.email.split('@')[0],
-      points: participant.points,
-      tier: participant.status ?? '',
+      participant: participantSnapshot,
       passType: 'loyalty' as const,
       template: loyaltyTemplate?.apple_template || {},
+      pointsDisplay,
     };
 
     const rewardsPassData = {
       programId: program.perk_program_id,
       perkUuid: perk_uuid,
-      participantName: participant.email.split('@')[0],
-      points: 0,
+      participant: participantSnapshot,
       passType: 'rewards' as const,
       template: rewardsTemplate?.apple_template || {},
+      pointsDisplay,
     };
 
     const { passBuffer: loyaltyApplePass, serialNumber: loyaltySerial, authToken: loyaltyAuth } = 
@@ -120,20 +126,19 @@ export async function POST(request: NextRequest) {
     const googleWalletLoyaltyData = {
       programId: program.perk_program_id,
       perkUuid: perk_uuid,
-      participantName: participant.email.split('@')[0],
-      points: participant.points,
-      tier: participant.status ?? '',
+      participant: participantSnapshot,
       passType: 'loyalty' as const,
       template: loyaltyTemplate?.google_template || {},
+      pointsDisplay,
     };
 
     const googleWalletRewardsData = {
       programId: program.perk_program_id,
       perkUuid: perk_uuid,
-      participantName: participant.email.split('@')[0],
-      points: 0,
+      participant: participantSnapshot,
       passType: 'rewards' as const,
       template: rewardsTemplate?.google_template || {},
+      pointsDisplay,
     };
 
     const { saveUrl: googleSaveUrl, loyaltyObjectId, rewardsObjectId } = 

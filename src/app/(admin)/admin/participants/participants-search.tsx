@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Search, RotateCcw, Send, Users } from 'lucide-react'
+import { Search, RotateCcw, Send, Users, ExternalLink } from 'lucide-react'
 import { searchParticipants } from '@/lib/admin-service'
 import type { Database } from '@/lib/supabase'
 
@@ -146,6 +147,16 @@ export default function ParticipantsSearch() {
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                            >
+                              <Link href={`/admin/participants/${participant.perk_uuid}`}>
+                                <ExternalLink className="w-3 h-3 mr-1" />
+                                View
+                              </Link>
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"

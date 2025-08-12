@@ -73,7 +73,7 @@ export default function TemplateEditor({ template }: TemplateEditorProps) {
             )}
           </DialogTitle>
           <DialogDescription>
-            {template.pass_type} template for program
+            {template.pass_kind} template for program
           </DialogDescription>
         </DialogHeader>
 

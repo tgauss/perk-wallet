@@ -36,6 +36,9 @@ export default function EditProgramForm({ program }: EditProgramFormProps) {
     apple_pass_type_id: program.apple_pass_type_id || '',
     google_wallet_class_id: program.google_wallet_class_id || '',
     
+    // Settings
+    points_display: (program.settings as any)?.points_display || 'unused_points',
+    
     // Branding
     branding_colors: program.branding_colors,
     branding_assets: program.branding_assets,
@@ -56,6 +59,10 @@ export default function EditProgramForm({ program }: EditProgramFormProps) {
         api_key: formData.api_key,
         apple_pass_type_id: formData.apple_pass_type_id || null,
         google_wallet_class_id: formData.google_wallet_class_id || null,
+        settings: {
+          ...(program.settings || {}),
+          points_display: formData.points_display,
+        },
         branding_colors: formData.branding_colors,
         branding_assets: formData.branding_assets,
         branding_fonts: formData.branding_fonts,
@@ -216,6 +223,39 @@ export default function EditProgramForm({ program }: EditProgramFormProps) {
               onChange={(e) => setFormData(prev => ({ ...prev, google_wallet_class_id: e.target.value }))}
               placeholder="3388000000012345678.loyalty_class_1"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Points Display Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Points Display Configuration</CardTitle>
+          <CardDescription>
+            Configure which points field to display in wallet passes and notifications
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="points_display">Current Points Field</Label>
+            <Select
+              value={formData.points_display}
+              onValueChange={(value: 'points' | 'unused_points') => 
+                setFormData(prev => ({ ...prev, points_display: value }))
+              }
+            >
+              <SelectTrigger id="points_display">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unused_points">Unused Points (Available to spend)</SelectItem>
+                <SelectItem value="points">Total Points (All-time earned)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              This affects what is shown in wallet passes and notification messages for point changes.
+              Default is "Unused Points" which shows available points that can be redeemed.
+            </p>
           </div>
         </CardContent>
       </Card>

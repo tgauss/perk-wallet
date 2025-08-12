@@ -71,7 +71,7 @@ export type Database = {
         Row: {
           id: string;
           program_id: string;
-          pass_type: 'loyalty' | 'rewards';
+          pass_kind: 'loyalty' | 'rewards';
           version: number;
           apple_template: Record<string, any>;
           google_template: Record<string, any>;
@@ -91,8 +91,12 @@ export type Database = {
           email: string;
           perk_participant_id: string;
           points: number;
+          unused_points: number;
           tier: string | null;
           status: string | null;
+          fname: string | null;
+          lname: string | null;
+          tag_list: string[];
           profile_attributes: Record<string, any>;
           last_sync_at: string | null;
           last_webhook_event_type: string | null;

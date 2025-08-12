@@ -407,9 +407,152 @@ For issues and questions:
 - Documentation: [docs-link]
 - Perk API Docs: https://perk.studio/docs
 
+## Participant Mapping and Points Defaults
+
+### Points Display Configuration
+
+By default, wallet passes and notifications display **Unused Points** (available to spend) rather than total lifetime points. This can be configured per program:
+
+1. **Admin Configuration**: 
+   - Go to `/admin/programs/{id}` → Edit Settings tab
+   - Under "Points Display Configuration", choose between:
+     - **Unused Points** (default): Shows available balance for redemption
+     - **Total Points**: Shows all-time earned points
+
+2. **Programmatic Access**:
+   ```typescript
+   // Read program setting (defaults to 'unused_points')
+   const pointsDisplay = program.settings?.points_display || 'unused_points';
+   
+   // Use in pass builders and notifications
+   const currentPoints = pointsDisplay === 'points' 
+     ? participant.points 
+     : participant.unused_points;
+   ```
+
+### Participant Data Mapping
+
+The system normalizes Perk participant data into a consistent `ParticipantSnapshot`:
+
+```typescript
+interface ParticipantSnapshot {
+  perk_participant_id: number;
+  perk_uuid: string;
+  email: string | null;
+  points: number;
+  unused_points: number;
+  status: string | null;
+  tier: string | null;  // Falls back to status if tier is null
+  fname: string | null;
+  lname: string | null;
+  tag_list: string[];
+  profile: Record<string, unknown>;
+}
+```
+
+### Merge Tags for Templates
+
+Templates support dynamic content replacement using merge tags:
+
+#### Supported Tags
+- `{points}` - Total lifetime points
+- `{unused_points}` - Available balance
+- `{status}` - Participant status
+- `{tier}` - Tier (or status if tier is null)
+- `{email}` - Email address
+- `{fname}` / `{lname}` - First/last name
+- `{full_name}` - Combined first + last name
+- `{program_name}` - Program name
+- `{profile.*}` - Profile attributes (e.g., `{profile.seat_section}`)
+- `{points_delta}` - Points change amount (notifications only)
+- `{new_points}` - New balance after change (notifications only)
+
+#### Example Usage
+```typescript
+// Notification template
+const template = "You gained {points_delta} points! New balance: {new_points}";
+
+// Resolves to: "You gained +25 points! New balance: 150"
+```
+
+### Notification Merge Window and Throttling
+
+Rapid point updates are automatically merged to prevent notification spam:
+
+#### Merge Window (default: 120 seconds)
+- Multiple point updates within the window are combined into one notification
+- Shows total change from first to last event
+- Prevents overwhelming users with rapid updates
+
+#### Throttling (default: 300 seconds)
+- Prevents duplicate notifications for the same participant+rule
+- Applies after merge window expires
+- Tracks last notification sent time
+
+#### Example: 5 Updates in 90 Seconds
+```typescript
+// Input: 5 separate +5 point events over 90 seconds
+// Result: Single notification "You gained +25 points! New balance: 125"
+```
+
+### Admin Testing: Simulate Points Burst
+
+For development and testing, admins can simulate rapid point updates:
+
+1. **Access**: Visit `/admin/participants/{perk_uuid}` (development only)
+2. **Permissions**: Requires super_admin or program_admin role
+3. **Configuration**:
+   - **Total Events**: Number of simulated updates (1-20)
+   - **Points Per Event**: Points to add per update (+1 to +100)
+   - **Duration**: Time to spread events over (10-300 seconds)
+
+4. **Behavior**:
+   - Generates synthetic notification events without affecting Perk balances
+   - Tests merge window and throttle functionality
+   - Creates job records to track buffer collapse
+   - Links to `/admin/jobs` to monitor processing
+
+### How It Works
+
+1. **Webhook Processing**: 
+   - Fetches latest participant data from Perk API
+   - Normalizes to `ParticipantSnapshot` format
+   - Updates database with all participant fields
+
+2. **Pass Building**:
+   - Uses `ParticipantSnapshot` interface
+   - Applies program's `points_display` setting
+   - Handles tier fallback to status automatically
+
+3. **Notifications**:
+   - Queues events in memory buffer
+   - Merges rapid updates within window
+   - Sends single notification with total delta
+   - Respects throttle limits per participant+rule
+
+4. **Template Validation**:
+   - Checks for unknown merge tags
+   - Warns about missing profile attributes
+   - Validates tag syntax in admin interface
+
 ## Version History
 
-### Latest: v0.2.0 (2025-08-12)
+### Latest: v0.3.1 (2025-08-12)
+- **Schema Standardization**: Fixed templates.pass_type → pass_kind for consistency with passes table
+- **Enhanced Documentation**: Updated CLAUDE.md and README with comprehensive feature mapping
+- **Database Schema Documentation**: Complete mapping of participants table enhancements
+- **File Structure Updates**: Documented new /src/lib/perk/ directory and notification system files
+
+### v0.3.0 (2025-08-12)
+- **Participant Data Alignment**: Normalized ParticipantSnapshot interface with Perk API
+- **Points Display Configuration**: Per-program setting for unused_points vs total points
+- **Merge Tag System**: Template support with validation and 16 supported tags
+- **Notification Merging**: 120s merge window and 300s throttling for rapid updates
+- **Admin Testing Tools**: Simulate points burst feature for throttle testing
+- **Enhanced Pass Builders**: Updated Apple/Google builders to use ParticipantSnapshot
+- **Comprehensive Testing**: Unit tests for normalization, merge tags, and notifications
+
+### v0.2.0 (2025-08-12)
 - Complete Admin Interface with Role-Based Access Control
 - Program Management System with API validation
 - Status management (draft/active/inactive)
