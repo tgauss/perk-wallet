@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AlertCircle, Settings, Loader2 } from 'lucide-react'
-import { updateProgramStatus, getStatusTransitionEffects, type ProgramStatus, type ProgramStatusChange } from '@/lib/admin-actions'
+import { updateProgramStatus } from '@/lib/admin-actions'
+import { getStatusTransitionEffects, type ProgramStatus, type ProgramStatusChange } from '@/lib/program-utils'
 import type { Database } from '@/lib/supabase'
 
 type Program = Database['public']['Tables']['programs']['Row']

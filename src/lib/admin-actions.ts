@@ -5,17 +5,13 @@ import { supabase } from './supabase'
 import { requireEmulatedIdentity } from './auth-emulator'
 import { canEditProgram, canManageParticipants, canManagePasses, canManageJobs, canViewAllPrograms } from './perm'
 import { validatePerkApiKey } from './perk-api'
+import { type ProgramStatus } from './program-utils'
 import type { Database } from './supabase'
 
 type Program = Database['public']['Tables']['programs']['Row']
 
-export type ProgramStatus = 'draft' | 'active' | 'inactive'
-
-export interface ProgramStatusChange {
-  from: ProgramStatus
-  to: ProgramStatus
-  effects: string[]
-}
+// Re-export types from program-utils for backward compatibility
+export { type ProgramStatus, type ProgramStatusChange } from './program-utils'
 
 // Example server action for updating program branding
 export async function updateProgramBranding(programId: string, branding: any) {
@@ -128,33 +124,8 @@ export async function bumpTemplateVersion(templateId: string, programId?: string
   }
 }
 
-// Get program status transition effects
-export function getStatusTransitionEffects(from: ProgramStatus, to: ProgramStatus): string[] {
-  const effects: string[] = []
-  
-  if (from === 'draft' && to === 'active') {
-    effects.push('Program will become visible to participants')
-    effects.push('Webhook endpoints will start receiving events')
-    effects.push('Pass generation will be enabled')
-    effects.push('API sync will begin automatically')
-  } else if (from === 'active' && to === 'inactive') {
-    effects.push('New participant registrations will be disabled')
-    effects.push('Webhook events will be paused')
-    effects.push('Existing participants retain their data')
-    effects.push('Pass updates will be suspended')
-  } else if (from === 'inactive' && to === 'active') {
-    effects.push('Participant registrations will be re-enabled')
-    effects.push('Webhook events will resume')
-    effects.push('Pass updates will resume')
-    effects.push('Data sync will restart')
-  } else if (to === 'draft') {
-    effects.push('Program will be hidden from participants')
-    effects.push('All program activities will be suspended')
-    effects.push('Configuration can be safely modified')
-  }
-  
-  return effects
-}
+// Re-export utility function for backward compatibility
+export { getStatusTransitionEffects } from './program-utils'
 
 // Create a new program (super admin only)
 export async function createProgram(data: {

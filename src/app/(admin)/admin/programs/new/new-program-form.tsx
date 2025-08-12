@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Copy, AlertCircle, Check, Loader2, CheckCircle } from 'lucide-react'
-import { createProgram, type ProgramStatus } from '@/lib/admin-actions'
+import { createProgram } from '@/lib/admin-actions'
+import { type ProgramStatus } from '@/lib/program-utils'
 
 interface ProgramFormData {
   // Basic Info
