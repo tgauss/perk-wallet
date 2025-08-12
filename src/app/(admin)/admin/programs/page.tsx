@@ -7,55 +7,14 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { requireEmulatedIdentity } from '@/lib/auth-emulator'
 import { canViewAllPrograms } from '@/lib/perm'
-import { Building2, Eye, Settings, Users, CreditCard } from 'lucide-react'
-
-// Mock programs data - in real app this would come from Supabase
-const getAllPrograms = () => [
-  {
-    id: '1',
-    name: 'Coffee Rewards',
-    program_id: 'coffee-123',
-    description: 'Loyalty program for coffee shop chain',
-    participants: 2450,
-    activePasses: 1820,
-    status: 'active',
-    created_at: '2024-01-15',
-  },
-  {
-    id: '2', 
-    name: 'Retail Loyalty',
-    program_id: 'retail-456',
-    description: 'Points-based rewards for retail customers',
-    participants: 5680,
-    activePasses: 4120,
-    status: 'active',
-    created_at: '2024-02-01',
-  },
-  {
-    id: '3',
-    name: 'Restaurant VIP',
-    program_id: 'restaurant-789',
-    description: 'VIP dining rewards program',
-    participants: 890,
-    activePasses: 650,
-    status: 'active',
-    created_at: '2024-03-10',
-  },
-]
-
-const getUserPrograms = (programId?: string) => {
-  const allPrograms = getAllPrograms()
-  if (!programId) return []
-  return allPrograms.filter(p => p.id === programId)
-}
+import { getAdminPrograms } from '@/lib/admin-service'
+import { Building2, Eye, Settings, Users, CreditCard, Plus } from 'lucide-react'
 
 export default async function ProgramsPage() {
   const identity = await requireEmulatedIdentity()
   const canViewAll = await canViewAllPrograms()
   
-  const programs = canViewAll 
-    ? getAllPrograms() 
-    : getUserPrograms(identity.programId)
+  const programs = await getAdminPrograms()
 
   return (
     <div className="p-6 space-y-6">
@@ -70,6 +29,14 @@ export default async function ProgramsPage() {
             }
           </p>
         </div>
+        {canViewAll && (
+          <Button asChild>
+            <Link href="/admin/programs/new">
+              <Plus className="w-4 h-4 mr-2" />
+              New Program
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Programs List */}
@@ -99,11 +66,19 @@ export default async function ProgramsPage() {
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
                       <CardTitle className="text-xl">{program.name}</CardTitle>
-                      <Badge variant="secondary">{program.status}</Badge>
+                      <Badge 
+                        variant={
+                          program.status === 'active' ? 'default' : 
+                          program.status === 'draft' ? 'secondary' : 
+                          'outline'
+                        }
+                      >
+                        {program.status}
+                      </Badge>
                     </div>
                     <CardDescription>{program.description}</CardDescription>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                      <span>ID: {program.program_id}</span>
+                      <span>ID: {program.perk_program_id}</span>
                       <span>•</span>
                       <span>Created: {new Date(program.created_at).toLocaleDateString()}</span>
                     </div>
@@ -148,7 +123,7 @@ export default async function ProgramsPage() {
                       <Building2 className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <div>
-                      <div className="text-lg font-semibold">99.2%</div>
+                      <div className="text-lg font-semibold">{program.successRate}%</div>
                       <div className="text-xs text-muted-foreground">Success Rate</div>
                     </div>
                   </div>
