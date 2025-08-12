@@ -10,8 +10,7 @@ import type { Database } from './supabase'
 
 type Program = Database['public']['Tables']['programs']['Row']
 
-// Re-export types from program-utils for backward compatibility
-export { type ProgramStatus, type ProgramStatusChange } from './program-utils'
+// Types are imported from program-utils - not re-exported due to "use server" restrictions
 
 // Example server action for updating program branding
 export async function updateProgramBranding(programId: string, branding: any) {
@@ -124,8 +123,7 @@ export async function bumpTemplateVersion(templateId: string, programId?: string
   }
 }
 
-// Re-export utility function for backward compatibility
-export { getStatusTransitionEffects } from './program-utils'
+// Utility functions are in program-utils.ts - not re-exported due to "use server" restrictions
 
 // Create a new program (super admin only)
 export async function createProgram(data: {
