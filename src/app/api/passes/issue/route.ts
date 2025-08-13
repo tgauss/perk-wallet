@@ -4,8 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { ApplePassBuilder } from '@/lib/apple-pass';
 import { GoogleWalletBuilder } from '@/lib/google-wallet';
 import { PerkClient } from '@/lib/perk-client';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { fromDatabaseRow } from '@/lib/perk/normalize';
+import { PKPass } from 'passkit-generator';
+import { qrSigner } from '@/lib/qr-code';
 
 const IssuePassRequestSchema = z.object({
   perk_uuid: z.string(),
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
       const { data } = await supabase
         .from('programs')
         .select('*')
-        .eq('id', programIdStr))
+        .eq('id', programIdStr)
         .single();
       program = data;
     }
@@ -86,10 +88,128 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const applePassBuilder = new ApplePassBuilder();
+      // Check required Apple environment variables
+      const requiredEnvVars = [
+        'APPLE_PASS_TYPE_IDENTIFIER',
+        'APPLE_TEAM_IDENTIFIER', 
+        'APPLE_WEB_SERVICE_URL',
+        'APPLE_AUTH_TOKEN_SECRET',
+        'APPLE_PASS_CERT_P12_BASE64',
+        'APPLE_PASS_CERT_PASSWORD'
+      ];
+      
+      for (const envVar of requiredEnvVars) {
+        if (!process.env[envVar]) {
+          return NextResponse.json(
+            { error: `Missing required environment variable: ${envVar}` },
+            { status: 400 }
+          );
+        }
+      }
+
       const participantSnapshot = fromDatabaseRow(participant);
       const pointsDisplay = program.settings?.points_display || 'unused_points';
+      const displayPoints = pointsDisplay === 'points' 
+        ? participantSnapshot.points 
+        : participantSnapshot.unused_points;
 
+      // Generate serial number and get auth token
+      const serialNumber = randomBytes(16).toString('hex').toUpperCase();
+      const authToken = process.env.APPLE_AUTH_TOKEN_SECRET!;
+      
+      // Generate QR code data
+      const qrData = qrSigner.generateQRData(perk_uuid);
+
+      // Build basePass with style based on pass_kind
+      let basePass: any = {
+        formatVersion: 1,
+        passTypeIdentifier: process.env.APPLE_PASS_TYPE_IDENTIFIER!,
+        serialNumber: serialNumber,
+        teamIdentifier: process.env.APPLE_TEAM_IDENTIFIER!,
+        organizationName: program.name || 'Perk Wallet',
+        description: pass_kind === 'loyalty' ? 'Loyalty Card' : 'Rewards Card',
+        webServiceURL: process.env.APPLE_WEB_SERVICE_URL!,
+        authenticationToken: authToken,
+        groupingIdentifier: String(program.perk_program_id),
+        backgroundColor: 'rgb(60, 65, 76)',
+        foregroundColor: 'rgb(255, 255, 255)',
+        labelColor: 'rgb(255, 255, 255)',
+        barcodes: [{
+          format: 'PKBarcodeFormatQR',
+          message: qrData,
+          messageEncoding: 'iso-8859-1'
+        }]
+      };
+
+      // Add pass-specific style section
+      if (pass_kind === 'loyalty') {
+        basePass.storeCard = {
+          primaryFields: [{
+            key: 'points',
+            label: 'POINTS',
+            value: displayPoints
+          }],
+          secondaryFields: [{
+            key: 'tier',
+            label: 'TIER',
+            value: participantSnapshot.tier || 'Member'
+          }],
+          auxiliaryFields: [{
+            key: 'member',
+            label: 'MEMBER',
+            value: [participantSnapshot.fname, participantSnapshot.lname].filter(Boolean).join(' ') || participantSnapshot.email || 'Member'
+          }]
+        };
+      } else {
+        basePass.generic = {
+          primaryFields: [{
+            key: 'rewards',
+            label: 'REWARDS',
+            value: `${displayPoints} Available`
+          }],
+          secondaryFields: [{
+            key: 'status',
+            label: 'STATUS',
+            value: 'Active'
+          }],
+          auxiliaryFields: [{
+            key: 'member',
+            label: 'MEMBER',
+            value: [participantSnapshot.fname, participantSnapshot.lname].filter(Boolean).join(' ') || participantSnapshot.email || 'Member'
+          }]
+        };
+      }
+
+      // Create minimal icon and logo (1x1 transparent PNG)
+      const icon = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+      const logo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+
+      // Create PKPass with pass.json buffer in first argument
+      const buffers = {
+        'icon.png': icon,
+        'icon@2x.png': icon,
+        'logo.png': logo,
+        'logo@2x.png': logo,
+        'pass.json': Buffer.from(JSON.stringify(basePass))
+      };
+      
+      const pass = new PKPass(buffers, {
+        wwdr: '', // Skip WWDR for now
+        signerCert: process.env.APPLE_PASS_CERT_P12_BASE64!,
+        signerKey: process.env.APPLE_PASS_CERT_P12_BASE64!,
+        signerKeyPassphrase: process.env.APPLE_PASS_CERT_PASSWORD!
+      }, {}); // No overrides needed
+      
+      const passBuffer = await pass.getAsBuffer();
+      
+      if (!passBuffer || passBuffer.length === 0) {
+        return NextResponse.json(
+          { error: 'Failed to generate pass' },
+          { status: 500 }
+        );
+      }
+
+      // Store or update the pass record
       const passData = {
         programId: program.perk_program_id,
         perkUuid: perk_uuid,
@@ -98,10 +218,7 @@ export async function POST(request: NextRequest) {
         template: template.apple_template || {},
         pointsDisplay,
       };
-
-      const { passBuffer, serialNumber, authToken } = await applePassBuilder.buildPass(passData);
-
-      // Store or update the pass record
+      
       await supabase
         .from('passes')
         .upsert({
@@ -120,7 +237,7 @@ export async function POST(request: NextRequest) {
         });
 
       // Return the .pkpass file
-      return new NextResponse(passBuffer, {
+      return new NextResponse(passBuffer as any, {
         status: 200,
         headers: {
           'Content-Type': 'application/vnd.apple.pkpass',

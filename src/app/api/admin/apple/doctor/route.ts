@@ -189,28 +189,28 @@ async function checkSigning(): Promise<DoctorItem[]> {
     // Generate test serial number
     const serialNumber = 'TEST-' + randomBytes(8).toString('hex').toUpperCase();
     
-    // Create minimal pass.json
-    const passJson: any = {
+    // Create minimal pass.json with style present
+    const basePass = {
       formatVersion: 1,
       passTypeIdentifier: passTypeId,
       serialNumber: serialNumber,
       teamIdentifier: teamId,
       organizationName: 'Perk Wallet Dev',
       description: 'Doctor smoke test',
-      barcodes: [{
-        format: 'PKBarcodeFormatQR',
-        message: 'TEST-APPLE',
-        messageEncoding: 'iso-8859-1'
-      }],
-      backgroundColor: 'rgb(20, 20, 20)',
-      foregroundColor: 'rgb(255, 255, 255)',
-      generic: {
+      generic: { 
         primaryFields: [{
           key: 'test',
           label: 'TEST',
           value: 'Doctor Check'
         }]
-      }
+      },
+      backgroundColor: 'rgb(20, 20, 20)',
+      foregroundColor: 'rgb(255, 255, 255)',
+      barcodes: [{
+        format: 'PKBarcodeFormatQR',
+        message: 'TEST-APPLE',
+        messageEncoding: 'iso-8859-1'
+      }]
     };
     
     items.push(createItem('Pass Serial', 'ok', serialNumber));
@@ -219,18 +219,21 @@ async function checkSigning(): Promise<DoctorItem[]> {
     const icon = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
     const logo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
     
-    // Try to create a PKPass - passkit-generator v3 style
-    const pass = new PKPass({
+    // Create PKPass with pass.json buffer in first argument
+    const buffers = {
       'icon.png': icon,
       'icon@2x.png': icon,
       'logo.png': logo,
-      'logo@2x.png': logo
-    }, {
+      'logo@2x.png': logo,
+      'pass.json': Buffer.from(JSON.stringify(basePass))
+    };
+    
+    const pass = new PKPass(buffers, {
       wwdr: '', // Skip WWDR for test
       signerCert: certBase64,
       signerKey: certBase64,
       signerKeyPassphrase: certPassword
-    }, passJson);
+    }, {}); // No overrides needed
     
     // Generate the pass buffer
     const passBuffer = await pass.getAsBuffer();
@@ -251,54 +254,76 @@ async function checkSigning(): Promise<DoctorItem[]> {
     items.push(createItem('Signing Status', 'ok', 'Successfully signed test pass'));
     
   } catch (error) {
-    items.push(createItem('Signing Test', 'fail', 
-      error instanceof Error ? error.message : 'Unknown error'));
+    let errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Add debug info if enabled (dev only)
+    if (process.env.APPLE_DOCTOR_DEBUG === 'true' && error instanceof Error) {
+      const debugInfo = error.message.includes('passkit-generator') 
+        ? 'PKPass constructor issue - check pass.json structure'
+        : errorMessage;
+      errorMessage = debugInfo;
+    }
+    
+    items.push(createItem('Signing Test', 'fail', errorMessage));
   }
   
   return items;
 }
 
-async function checkRoutes(): Promise<DoctorItem[]> {
+async function checkRoutes(request: NextRequest): Promise<DoctorItem[]> {
   const items: DoctorItem[] = [];
   
-  // Check for Apple web service routes
-  const routesToCheck = [
-    {
-      path: 'src/app/api/apple-web-service/v1/devices/[deviceLibraryIdentifier]/registrations/[passTypeIdentifier]/[serialNumber]/route.ts',
-      name: 'Apple Web Service (device registration)'
-    },
-    {
-      path: 'src/app/api/apple-web-service/v1/passes/[passTypeIdentifier]/[serialNumber]/route.ts',
-      name: 'Apple Web Service (pass info)'
-    },
-    {
-      path: 'src/app/api/apple-web-service/v1/log/route.ts',
-      name: 'Apple Web Service (log)'
-    }
-  ];
+  const baseUrl = request.url.split('/api')[0];
   
-  let foundRoutes = 0;
-  for (const route of routesToCheck) {
-    const fullPath = join(process.cwd(), route.path);
-    if (existsSync(fullPath)) {
-      foundRoutes++;
+  // Probe Apple web service log endpoint
+  try {
+    const response = await fetch(`${baseUrl}/api/apple-web-service/v1/log`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'apple-doctor-probe'
+      },
+      body: JSON.stringify({ messages: ['doctor probe'] })
+    });
+    
+    if (response.status === 200) {
+      items.push(createItem('Apple Web Service', 'ok', 'Log endpoint responding (200)'));
+    } else {
+      items.push(createItem('Apple Web Service', 'warn', `Log endpoint returned ${response.status}`));
     }
+  } catch (error) {
+    items.push(createItem('Apple Web Service', 'fail', 'Log endpoint not reachable'));
   }
   
-  if (foundRoutes === 3) {
-    items.push(createItem('Apple Web Service', 'ok', 'All 3 Apple web service routes found'));
-  } else if (foundRoutes > 0) {
-    items.push(createItem('Apple Web Service', 'warn', `${foundRoutes}/3 Apple web service routes found`));
-  } else {
-    items.push(createItem('Apple Web Service', 'fail', 'No Apple web service routes found'));
-  }
-  
-  // Check for pass generation routes
-  const passRoute = join(process.cwd(), 'src/app/api/passes/issue/route.ts');
-  if (existsSync(passRoute)) {
-    items.push(createItem('Pass Issue Route', 'ok', 'Found at /api/passes/issue'));
-  } else {
-    items.push(createItem('Pass Issue Route', 'fail', 'Missing pass issue route'));
+  // Probe pass issue route
+  try {
+    const response = await fetch(`${baseUrl}/api/passes/issue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'apple-doctor-probe'
+      },
+      body: JSON.stringify({ 
+        program_id: '44', 
+        perk_uuid: 'test-uuid-1', 
+        pass_kind: 'loyalty', 
+        download: false 
+      })
+    });
+    
+    if (response.status === 200 || response.status === 404) {
+      const data = await response.json();
+      const message = response.status === 200 ? 'Endpoint responding (200)' : 
+        `Endpoint responding (${response.status}): ${data.error || 'Not found'}`;
+      items.push(createItem('Pass Issue Route', 'ok', message));
+    } else if (response.status === 400) {
+      const data = await response.json();
+      items.push(createItem('Pass Issue Route', 'ok', `Endpoint responding (400): ${data.error || 'Bad request'}`));
+    } else {
+      items.push(createItem('Pass Issue Route', 'warn', `Endpoint returned ${response.status}`));
+    }
+  } catch (error) {
+    items.push(createItem('Pass Issue Route', 'fail', 'Pass issue endpoint not reachable'));
   }
   
   return items;
@@ -319,7 +344,7 @@ export async function GET(request: NextRequest) {
     checkEnvVars(),
     checkCertificate(),
     checkSigning(),
-    checkRoutes()
+    checkRoutes(request)
   ]);
   
   const response: AppleDoctorResponse = {
