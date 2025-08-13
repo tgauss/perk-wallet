@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "doctor": "curl -s http://localhost:3000/api/admin/doctor | jq -r '.sections[] | \"\\(.name):\", (.items[] | \"  \\(.status | ascii_upcase): \\(.name) - \\(.details)\"), \"\"'"
+    "doctor": "curl -s http://localhost:3000/api/admin/doctor | jq -r '.sections[] | \"\\(.name):\", (.items[] | \"  \\(.status | ascii_upcase): \\(.name) - \\(.details)\"), \"\"'",
+    "apple:doctor": "node scripts/apple-doctor.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
@@ -18,12 +19,14 @@
     "@radix-ui/react-tabs": "^1.1.12",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@supabase/supabase-js": "^2.54.0",
+    "@types/node-forge": "^1.3.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "google-auth-library": "^10.2.1",
     "jose": "^6.0.12",
     "lucide-react": "^0.539.0",
     "next": "15.4.6",
+    "node-forge": "^1.3.1",
     "passkit-generator": "^3.4.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
