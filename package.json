@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "doctor": "curl -s http://localhost:3000/api/admin/doctor | jq -r '.sections[] | \"\\(.name):\", (.items[] | \"  \\(.status | ascii_upcase): \\(.name) - \\(.details)\"), \"\"'"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",

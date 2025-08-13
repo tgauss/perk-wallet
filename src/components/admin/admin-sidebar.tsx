@@ -10,7 +10,8 @@ import {
   CreditCard, 
   Cog, 
   Webhook, 
-  Settings
+  Settings,
+  Stethoscope
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { type EmulatedIdentity } from '@/lib/auth-emulator'
@@ -32,6 +33,7 @@ const navigation = [
 
 const devNavigation = [
   { name: 'Emulator', href: '/admin/emulator', icon: Settings },
+  { name: 'Doctor', href: '/admin/doctor', icon: Stethoscope },
 ]
 
 export function AdminSidebar({ identity }: AdminSidebarProps) {
