@@ -264,31 +264,33 @@ async function checkRoutes(): Promise<DoctorItem[]> {
   // Check for Apple web service routes
   const routesToCheck = [
     {
-      path: 'src/app/api/apple/web-service/route.ts',
-      name: 'Apple Web Service Route'
+      path: 'src/app/api/apple-web-service/v1/devices/[deviceLibraryIdentifier]/registrations/[passTypeIdentifier]/[serialNumber]/route.ts',
+      name: 'Apple Web Service (device registration)'
     },
     {
-      path: 'src/app/api/apple/v1/route.ts', 
-      name: 'Apple Web Service v1'
+      path: 'src/app/api/apple-web-service/v1/passes/[passTypeIdentifier]/[serialNumber]/route.ts',
+      name: 'Apple Web Service (pass info)'
     },
     {
-      path: 'src/app/api/apple-web-service/route.ts',
-      name: 'Apple Web Service (alt)'
+      path: 'src/app/api/apple-web-service/v1/log/route.ts',
+      name: 'Apple Web Service (log)'
     }
   ];
   
-  let foundRoute = false;
+  let foundRoutes = 0;
   for (const route of routesToCheck) {
     const fullPath = join(process.cwd(), route.path);
     if (existsSync(fullPath)) {
-      items.push(createItem(route.name, 'ok', `Found at ${route.path}`));
-      foundRoute = true;
-      break;
+      foundRoutes++;
     }
   }
   
-  if (!foundRoute) {
-    items.push(createItem('Apple Web Service', 'warn', 'No Apple web service route found (pass updates may not work)'));
+  if (foundRoutes === 3) {
+    items.push(createItem('Apple Web Service', 'ok', 'All 3 Apple web service routes found'));
+  } else if (foundRoutes > 0) {
+    items.push(createItem('Apple Web Service', 'warn', `${foundRoutes}/3 Apple web service routes found`));
+  } else {
+    items.push(createItem('Apple Web Service', 'fail', 'No Apple web service routes found'));
   }
   
   // Check for pass generation routes

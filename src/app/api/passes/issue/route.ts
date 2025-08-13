@@ -9,7 +9,9 @@ import { fromDatabaseRow } from '@/lib/perk/normalize';
 
 const IssuePassRequestSchema = z.object({
   perk_uuid: z.string(),
-  program_id: z.string(),
+  program_id: z.union([z.string(), z.number()]),
+  pass_kind: z.enum(['loyalty', 'rewards']).optional(),
+  download: z.boolean().optional(), // If true, return the .pkpass file directly
 });
 
 function generateDataHash(data: any): string {
@@ -21,16 +23,17 @@ function generateDataHash(data: any): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { perk_uuid, program_id } = IssuePassRequestSchema.parse(body);
+    const { perk_uuid, program_id, pass_kind = 'loyalty', download = false } = IssuePassRequestSchema.parse(body);
 
     // Handle both numeric program_id and UUID program_id
     let program;
-    if (/^\d+$/.test(program_id)) {
+    const programIdStr = String(program_id);
+    if (/^\d+$/.test(programIdStr)) {
       // Numeric program_id - look up by perk_program_id
       const { data } = await supabase
         .from('programs')
         .select('*')
-        .eq('perk_program_id', Number(program_id))
+        .eq('perk_program_id', Number(programIdStr))
         .single();
       program = data;
     } else {
@@ -38,7 +41,7 @@ export async function POST(request: NextRequest) {
       const { data } = await supabase
         .from('programs')
         .select('*')
-        .eq('id', program_id)
+        .eq('id', programIdStr))
         .single();
       program = data;
     }
@@ -65,6 +68,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If download is requested, return a single .pkpass file
+    if (download) {
+      // Check if pass_kind is valid
+      const { data: template } = await supabase
+        .from('templates')
+        .select('*')
+        .eq('program_id', program.id)
+        .eq('pass_kind', pass_kind)
+        .eq('is_active', true)
+        .single();
+
+      if (!template) {
+        return NextResponse.json(
+          { error: `Template not found for pass_kind: ${pass_kind}` },
+          { status: 404 }
+        );
+      }
+
+      const applePassBuilder = new ApplePassBuilder();
+      const participantSnapshot = fromDatabaseRow(participant);
+      const pointsDisplay = program.settings?.points_display || 'unused_points';
+
+      const passData = {
+        programId: program.perk_program_id,
+        perkUuid: perk_uuid,
+        participant: participantSnapshot,
+        passType: pass_kind as 'loyalty' | 'rewards',
+        template: template.apple_template || {},
+        pointsDisplay,
+      };
+
+      const { passBuffer, serialNumber, authToken } = await applePassBuilder.buildPass(passData);
+
+      // Store or update the pass record
+      await supabase
+        .from('passes')
+        .upsert({
+          perk_uuid: perk_uuid,
+          program_id: program.id,
+          pass_kind: pass_kind,
+          apple_serial_number: serialNumber,
+          apple_auth_token: authToken,
+          apple_device_tokens: [],
+          last_updated_at: new Date().toISOString(),
+          data_hash: generateDataHash(passData),
+          pass_data: passData,
+          version: 1,
+        }, {
+          onConflict: 'perk_uuid,program_id,pass_kind'
+        });
+
+      // Return the .pkpass file
+      return new NextResponse(passBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/vnd.apple.pkpass',
+          'Content-Disposition': `attachment; filename="${pass_kind}-${perk_uuid}.pkpass"`,
+          'Content-Length': passBuffer.length.toString()
+        }
+      });
+    }
+
+    // Original flow - create both passes and return JSON
     const { data: existingPasses } = await supabase
       .from('passes')
       .select('*')

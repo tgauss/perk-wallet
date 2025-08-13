@@ -53,9 +53,41 @@ export default function MagicInstallPage() {
   };
 
   const handleInstallApple = async () => {
-    if (!passData?.applePassUrl) return;
     setInstalling(true);
-    window.location.href = passData.applePassUrl;
+    try {
+      const response = await fetch('/api/passes/issue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          program_id: programId,
+          perk_uuid: perkUuid,
+          pass_kind: 'loyalty',
+          download: true
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate pass');
+      }
+
+      // Create a blob from the response and trigger download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `loyalty-${perkUuid}.pkpass`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading Apple pass:', error);
+      alert('Failed to download pass. Please try again.');
+    } finally {
+      setInstalling(false);
+    }
   };
 
   const handleInstallGoogle = async () => {
