@@ -12,7 +12,8 @@ import {
   Webhook, 
   Settings,
   Stethoscope,
-  Palette
+  Palette,
+  Edit3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { type EmulatedIdentity } from '@/lib/auth-emulator'
@@ -41,6 +42,11 @@ const devNavigation = [
 export function AdminSidebar({ identity }: AdminSidebarProps) {
   const pathname = usePathname()
 
+  // Extract program ID from pathname if we're on a program page
+  const programIdMatch = pathname.match(/\/admin\/programs\/([^\/]+)/)
+  const programId = programIdMatch ? programIdMatch[1] : null
+  const isOnProgramPage = !!programId && programId !== 'new'
+
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'super_admin': return 'destructive'
@@ -51,6 +57,12 @@ export function AdminSidebar({ identity }: AdminSidebarProps) {
       default: return 'outline'
     }
   }
+
+  // Program-specific navigation when viewing a specific program
+  const programNavigation = isOnProgramPage ? [
+    { name: 'Templates', href: `/admin/programs/${programId}/templates`, icon: Edit3 },
+    { name: 'Branding', href: `/admin/programs/${programId}/branding`, icon: Palette },
+  ] : []
 
   return (
     <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -89,6 +101,35 @@ export function AdminSidebar({ identity }: AdminSidebarProps) {
             </Link>
           )
         })}
+
+        {/* Program-specific navigation section */}
+        {isOnProgramPage && (
+          <>
+            <div className="pt-4">
+              <div className="text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider mb-2">
+                Program Pages
+              </div>
+              {programNavigation.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                      isActive 
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </>
+        )}
       </nav>
 
       {/* Development section */}
