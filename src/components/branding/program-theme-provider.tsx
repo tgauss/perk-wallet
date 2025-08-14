@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { loadProgramBranding, brandingToCSSVariables, generateGoogleFontsUrl, ProgramBranding } from '@/lib/branding';
+import { defaultBranding, brandingToCSSVariables, generateGoogleFontsUrl, ProgramBranding } from '@/lib/branding';
 import { ProgramThemeClient } from './program-theme-client';
 
 interface ProgramThemeProviderProps {
@@ -8,8 +8,18 @@ interface ProgramThemeProviderProps {
 }
 
 export async function ProgramThemeProvider({ programId, children }: ProgramThemeProviderProps) {
-  // Load branding from database
-  const branding = await loadProgramBranding(programId);
+  let branding = defaultBranding;
+  
+  // Only load branding during runtime, not during build
+  if (typeof window !== 'undefined' || process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    try {
+      const { loadProgramBranding } = await import('@/lib/branding');
+      branding = await loadProgramBranding(programId);
+    } catch (error) {
+      console.warn('Failed to load program branding, using defaults:', error);
+      branding = defaultBranding;
+    }
+  }
   
   // Generate CSS variables
   const cssVariables = brandingToCSSVariables(branding);

@@ -113,13 +113,41 @@ export const radiusMap = {
   full: '9999px',
 };
 
-// Default branding configuration
+// Default branding configuration - avoid Zod parsing during build
 export const defaultBranding: ProgramBranding = {
-  colors: BrandingColorsSchema.parse({}),
-  fonts: BrandingFontsSchema.parse({}),
-  borders: BrandingBordersSchema.parse({}),
-  assets: BrandingAssetsSchema.parse({}),
-  header_content: BrandingHeaderContentSchema.parse({}),
+  colors: {
+    brand_color: '#3B82F6',
+    brand_secondary_color: '#10B981',
+    text_primary: '#0F172A',
+    text_secondary: '#64748B',
+    text_muted: '#94A3B8',
+    background_primary: '#FFFFFF',
+    background_secondary: '#F8FAFC',
+    background_muted: '#F1F5F9',
+    grad_from: '#3B82F6',
+    grad_to: '#10B981',
+  },
+  fonts: {
+    header_font: {
+      family: 'Inter',
+      weights: ['600', '700'],
+    },
+    body_font: {
+      family: 'Open Sans',
+      weights: ['400', '600'],
+    },
+  },
+  borders: {
+    button_radius: 'md',
+    input_radius: 'md',
+    tile_radius: 'lg',
+    card_radius: 'lg',
+  },
+  assets: {},
+  header_content: {
+    header_text: 'Welcome to Our Program',
+    header_description: 'Experience exclusive rewards and benefits',
+  },
 };
 
 // Load program branding from database
