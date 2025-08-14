@@ -1,37 +1,24 @@
 'use server'
 
-import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 
-// Validation schemas
-const DraftPatchSchema = z.object({
-  layout: z.record(z.any()).optional(),
-  assets: z.record(z.any()).optional(),
-})
-
-const DraftUpdateResult = z.object({
-  ok: z.literal(true),
-}).or(z.object({
-  ok: z.literal(false),
-  error: z.string(),
-}))
-
-const PublishResult = z.object({
-  ok: z.literal(true),
-  version: z.number(),
-}).or(z.object({
-  ok: z.literal(false),
-  error: z.string(),
-}))
-
-export type DraftUpdateResult = z.infer<typeof DraftUpdateResult>
-export type PublishResult = z.infer<typeof PublishResult>
+// Types (keeping inference separate from runtime validation)
+export type DraftUpdateResult = { ok: true } | { ok: false; error: string }
+export type PublishResult = { ok: true; version: number } | { ok: false; error: string }
 
 export async function updateDraft(
   draftId: string,
   patch: { layout?: unknown; assets?: unknown }
 ): Promise<DraftUpdateResult> {
   try {
+    // Dynamic import for validation
+    const { z } = await import('@/lib/z')
+    
+    const DraftPatchSchema = z.object({
+      layout: z.record(z.unknown()).optional(),
+      assets: z.record(z.unknown()).optional(),
+    })
+    
     // Validate input
     const validatedPatch = DraftPatchSchema.parse(patch)
     
