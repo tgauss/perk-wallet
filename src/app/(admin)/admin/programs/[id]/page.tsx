@@ -139,6 +139,28 @@ export default async function ProgramPage({ params }: ProgramPageProps) {
         {/* Branding Tab */}
         <TabsContent value="branding">
           <div className="grid gap-6">
+            {/* Branding Actions */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Program Branding</CardTitle>
+                    <CardDescription>
+                      Customize colors, fonts, and visual appearance
+                    </CardDescription>
+                  </div>
+                  {canEdit && (
+                    <Link href={`/admin/programs/${params.id}/branding`}>
+                      <Button>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Configure Branding
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </CardHeader>
+            </Card>
+            
             {/* Colors */}
             <Card>
               <CardHeader>

@@ -85,3 +85,44 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* Program theme support - dynamic CSS variables override defaults */
+.program-theme-wrapper {
+  /* The provider will inject CSS variables that override the defaults above */
+  /* This ensures themed programs use their brand colors while maintaining fallbacks */
+}
+
+/* Program-specific font families */
+.program-theme-wrapper .font-header {
+  font-family: var(--header-font, inherit);
+}
+
+.program-theme-wrapper .font-body {
+  font-family: var(--body-font, inherit);
+}
+
+/* Gradient backgrounds for preview headers */
+.program-gradient-bg {
+  background: linear-gradient(135deg, var(--grad-from, #3B82F6), var(--grad-to, #10B981));
+}
+
+/* Theme-aware components */
+.program-theme-wrapper .themed-button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: var(--radius);
+}
+
+.program-theme-wrapper .themed-card {
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+}
+
+.program-theme-wrapper .themed-input {
+  background-color: hsl(var(--input));
+  color: hsl(var(--foreground));
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid hsl(var(--border));
+}
