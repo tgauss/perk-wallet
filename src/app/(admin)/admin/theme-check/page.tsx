@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { ThemeDoctorClient } from './theme-doctor-client';
 
 export default function ThemeCheckPage() {

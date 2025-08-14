@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { notFound } from 'next/navigation';
 import { loadProgramBranding } from '@/lib/branding';
 import { BrandingForm } from './branding-form';

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
 
 // Zod schemas for branding data structures
 export const BrandingColorsSchema = z.object({
@@ -15,14 +14,39 @@ export const BrandingColorsSchema = z.object({
   grad_to: z.string().default('#10B981'),
 });
 
-export const BrandingFontsSchema = z.object({
-  header_font: z.object({
-    family: z.string().default('Inter'),
-    weights: z.array(z.string()).default(['600', '700']),
+// Handle both legacy string format and new object format for fonts
+const FontSchema = z.union([
+  z.string(),
+  z.object({
+    family: z.string(),
+    weights: z.array(z.string()),
   }),
-  body_font: z.object({
-    family: z.string().default('Open Sans'),
-    weights: z.array(z.string()).default(['400', '600']),
+]);
+
+export const BrandingFontsSchema = z.object({
+  header_font: FontSchema.transform((val) => {
+    if (typeof val === 'string') {
+      return {
+        family: val || 'Inter',
+        weights: ['600', '700'],
+      };
+    }
+    return {
+      family: val.family || 'Inter',
+      weights: val.weights || ['600', '700'],
+    };
+  }),
+  body_font: FontSchema.transform((val) => {
+    if (typeof val === 'string') {
+      return {
+        family: val || 'Open Sans',
+        weights: ['400', '600'],
+      };
+    }
+    return {
+      family: val.family || 'Open Sans',
+      weights: val.weights || ['400', '600'],
+    };
   }),
 });
 
@@ -58,11 +82,26 @@ export const ProgramBrandingSchema = z.object({
 
 // TypeScript types derived from schemas
 export type BrandingColors = z.infer<typeof BrandingColorsSchema>;
-export type BrandingFonts = z.infer<typeof BrandingFontsSchema>;
+export type BrandingFonts = {
+  header_font: {
+    family: string;
+    weights: string[];
+  };
+  body_font: {
+    family: string;
+    weights: string[];
+  };
+};
 export type BrandingBorders = z.infer<typeof BrandingBordersSchema>;
 export type BrandingAssets = z.infer<typeof BrandingAssetsSchema>;
 export type BrandingHeaderContent = z.infer<typeof BrandingHeaderContentSchema>;
-export type ProgramBranding = z.infer<typeof ProgramBrandingSchema>;
+export type ProgramBranding = {
+  colors: BrandingColors;
+  fonts: BrandingFonts;
+  borders: BrandingBorders;
+  assets: BrandingAssets;
+  header_content: BrandingHeaderContent;
+};
 
 // Radius mapping for CSS
 export const radiusMap = {
@@ -85,26 +124,42 @@ export const defaultBranding: ProgramBranding = {
 
 // Load program branding from database
 export async function loadProgramBranding(programId: string): Promise<ProgramBranding> {
-  
-  const { data, error } = await supabase
-    .from('programs')
-    .select('branding_colors, branding_assets, branding_borders, branding_fonts')
-    .eq('id', programId)
-    .single();
-    
-  if (error || !data) {
-    console.warn(`Failed to load branding for program ${programId}, using defaults:`, error);
+  // During build time, return defaults to avoid database calls
+  if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return defaultBranding;
   }
+  
+  try {
+    // Dynamic import to avoid loading during build
+    const { supabase } = await import('@/lib/supabase');
+    const { data, error } = await supabase
+      .from('programs')
+      .select('branding_colors, branding_assets, branding_borders, branding_fonts')
+      .eq('id', programId)
+      .single();
+      
+    if (error || !data) {
+      console.warn(`Failed to load branding for program ${programId}, using defaults:`, error);
+      return defaultBranding;
+    }
   
   // Parse and validate each branding section with defaults
   const colors = data.branding_colors 
     ? BrandingColorsSchema.parse({ ...defaultBranding.colors, ...data.branding_colors })
     : defaultBranding.colors;
     
-  const fonts = data.branding_fonts
-    ? BrandingFontsSchema.parse({ ...defaultBranding.fonts, ...data.branding_fonts })
-    : defaultBranding.fonts;
+  // Handle fonts - they might be strings or objects in the database
+  let fonts: BrandingFonts = defaultBranding.fonts;
+  if (data.branding_fonts) {
+    try {
+      // Try to parse with the schema (handles both string and object formats)
+      const parsedFonts = BrandingFontsSchema.parse(data.branding_fonts);
+      fonts = parsedFonts as BrandingFonts;
+    } catch (e) {
+      console.warn('Failed to parse branding fonts, using defaults:', e);
+      fonts = defaultBranding.fonts;
+    }
+  }
     
   const borders = data.branding_borders
     ? BrandingBordersSchema.parse({ ...defaultBranding.borders, ...data.branding_borders })
@@ -114,13 +169,17 @@ export async function loadProgramBranding(programId: string): Promise<ProgramBra
     ? BrandingAssetsSchema.parse({ ...defaultBranding.assets, ...data.branding_assets })
     : defaultBranding.assets;
   
-  return {
-    colors,
-    fonts,
-    borders,
-    assets,
-    header_content: defaultBranding.header_content, // Will add to DB later
-  };
+    return {
+      colors,
+      fonts,
+      borders,
+      assets,
+      header_content: defaultBranding.header_content, // Will add to DB later
+    };
+  } catch (e) {
+    console.warn('Error loading branding, using defaults:', e);
+    return defaultBranding;
+  }
 }
 
 // Save program branding to database
@@ -130,13 +189,19 @@ export async function saveProgramBranding(
 ): Promise<{ success: boolean; error?: string }> {
   
   try {
+    // Dynamic import to avoid loading during build
+    const { supabase } = await import('@/lib/supabase');
     const updateData: any = {};
     
     if (branding.colors) {
       updateData.branding_colors = BrandingColorsSchema.parse(branding.colors);
     }
     if (branding.fonts) {
-      updateData.branding_fonts = BrandingFontsSchema.parse(branding.fonts);
+      // Save fonts in the format expected by the database and form
+      updateData.branding_fonts = {
+        header_font: branding.fonts.header_font,
+        body_font: branding.fonts.body_font,
+      };
     }
     if (branding.borders) {
       updateData.branding_borders = BrandingBordersSchema.parse(branding.borders);
@@ -223,6 +288,8 @@ export async function uploadBrandingAsset(
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   
   try {
+    // Dynamic import to avoid loading during build
+    const { supabase } = await import('@/lib/supabase');
     const finalFilename = filename || `${Date.now()}-${file.name}`;
     const path = getBrandingAssetPath(programId, finalFilename);
     

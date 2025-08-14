@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { type ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 import { getEmulatedIdentity, hasEmulatorSecret } from '@/lib/auth-emulator'

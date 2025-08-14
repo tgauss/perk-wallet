@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { ProgramBranding, saveProgramBranding, uploadBrandingAsset, BrandingAssets } from '@/lib/branding';
-import { supabase } from '@/lib/supabase';
 
 export async function saveBrandingAction(
   programId: string,
@@ -19,6 +18,7 @@ export async function saveBrandingAction(
     
     // Update program settings for the apply_to_new_templates flag
     if (applyToNewTemplates !== undefined) {
+      const { supabase } = await import('@/lib/supabase');
       
       const { error: settingsError } = await supabase
         .from('programs')
@@ -84,6 +84,7 @@ export async function uploadAssetAction(
     }
     
     // Update the program's branding_assets JSON
+    const { supabase } = await import('@/lib/supabase');
     
     // First, get current branding_assets
     const { data: currentData, error: fetchError } = await supabase
@@ -137,6 +138,7 @@ export async function seedProgramTheme(
   programId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const { supabase } = await import('@/lib/supabase');
     
     // Check if program exists
     const { data: program, error: fetchError } = await supabase
@@ -213,12 +215,13 @@ export async function seedProgramTheme(
     
     // Create storage folder if it doesn't exist
     try {
+      const { supabase: storageSupabase } = await import('@/lib/supabase');
       
       // Upload a placeholder file to create the folder structure
       const placeholderContent = new Blob([''], { type: 'text/plain' });
       const placeholderFile = new File([placeholderContent], '.gitkeep', { type: 'text/plain' });
       
-      await supabase.storage
+      await storageSupabase.storage
         .from('brand-assets')
         .upload(`programs/${programId}/branding/.gitkeep`, placeholderFile, {
           upsert: true,
