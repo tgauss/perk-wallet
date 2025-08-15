@@ -1,41 +1,46 @@
-# Perk Wallet MVP
+# Perk Wallet
 
-A Next.js application for issuing and managing Apple Wallet and Google Wallet passes for Perk loyalty programs with full multi-program support.
+A Next.js application for issuing and managing Apple Wallet and Google Wallet passes for Perk loyalty programs with complete multi-program support and enterprise-grade admin interface.
 
-## Features
+## What This Is
 
-- **Multi-Program Architecture**: Complete data isolation and branding per program
-- **Dual Pass Issuance**: Issues both Loyalty and My Rewards passes grouped together
-- **QR Code Generation**: Signed QR codes with HMAC-SHA256 and 180-second TTL
-- **Universal Magic Links**: `https://pass.perk.ooo/w/{programId}/{perkUuid}`
-- **Per-Program Webhooks**: Individual webhook endpoints with comprehensive event tracking
-- **Program Branding**: Customizable fonts, colors, assets, and borders per program
-- **Event Tracking**: Complete audit trail of all webhook events with program context
-- **API Resilience**: Automatic retry with exponential backoff and 429 rate limit handling
-- **Real-time Sync**: Updates passes within 60 seconds (p95) of Perk events
+Perk Wallet bridges Perk loyalty programs with mobile wallet platforms (Apple Wallet and Google Wallet), automatically generating dynamic wallet passes that update in real-time based on participant activity. Built for enterprise deployment with multi-tenant architecture, role-based access control, and comprehensive admin tooling.
+
+**Key Capabilities:**
+
+- **Universal Install Routes**: `pass.perk.ooo/w/44/246785` generates wallet passes for any participant
+- **Real-time Updates**: Wallet passes sync within 60 seconds of Perk events via webhooks
+- **Multi-Program Support**: Complete data isolation and custom branding per program
+- **Enterprise Admin**: Role-based dashboard with diagnostics, participant management, and template editing
+- **Dual Platform**: Simultaneous Apple Wallet (`.pkpass`) and Google Wallet pass generation
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 App Router with TypeScript
-- **Database**: Supabase Postgres
-- **Deployment**: Vercel
-- **Runtime**: Node 20
-- **Wallet Libraries**: passkit-generator (Apple), Google Wallet REST API
-- **Validation**: Zod
-- **Authentication**: Jose (JWT)
+- **Framework**: Next.js 15 App Router + TypeScript
+- **Database**: Supabase PostgreSQL + Storage
+- **UI**: shadcn/ui + Tailwind CSS + Radix UI
+- **Deployment**: Vercel (auto-deploy from main)
+- **Runtime**: Node.js 20+
+- **Validation**: Zod schemas throughout
+- **Wallet APIs**: passkit-generator (Apple), Google Wallet REST API
 
-## Prerequisites
+## Quick Start
 
-- Node.js 20+
-- pnpm package manager
-- Supabase account
-- Apple Developer account (for Apple Wallet)
-- Google Cloud account (for Google Wallet)
-- Perk API credentials
+### 1. Prerequisites
 
-## Setup
+```bash
+# Required tools
+node --version  # 20+
+pnpm --version  # 8+
 
-### 1. Clone and Install
+# Required accounts
+# - Supabase project
+# - Apple Developer account (for Apple Wallet)
+# - Google Cloud account (for Google Wallet)
+# - Perk API credentials
+```
+
+### 2. Clone and Install
 
 ```bash
 git clone https://github.com/your-org/perk-wallet.git
@@ -43,529 +48,311 @@ cd perk-wallet
 pnpm install
 ```
 
-### 2. Environment Variables
-
-Copy `.env.example` to `.env.local` and fill in your credentials:
+### 3. Environment Setup
 
 ```bash
 cp .env.example .env.local
+# Edit .env.local with your credentials (see ENV.md for details)
 ```
 
-Required environment variables:
-- `PERK_API_URL`: Perk API base URL (default: https://perk.studio)
-- `PERK_API_KEY`: Your Perk program API key
-- `PERK_WEBHOOK_SECRET`: Secret for webhook signature verification
-- `SUPABASE_*`: Supabase project credentials
-- `QR_SIGNING_SECRET`: Secret for QR code signing
-- `APPLE_*`: Apple Wallet configuration
-- `GOOGLE_*`: Google Wallet configuration
-
-### 3. Database Setup
-
-Run the Supabase migrations to create the required tables:
+### 4. Database Setup
 
 ```bash
+# Run Supabase migrations
 npx supabase db push
+
+# Or apply manually from supabase/migrations/
 ```
 
-Or manually run the SQL migrations:
-- `supabase/migrations/001_initial_schema.sql` - Core schema
-- `supabase/migrations/002_multi_program_support.sql` - Multi-program features
-
-### 4. Apple Wallet Setup
-
-1. Create a Pass Type ID in Apple Developer Console
-2. Generate signing certificates
-3. Add certificates to environment:
-   - `APPLE_WWDR_CERT`: Apple WWDR certificate
-   - `APPLE_SIGNER_CERT`: Your signing certificate
-   - `APPLE_SIGNER_KEY`: Your private key
-
-### 5. Google Wallet Setup
-
-1. Enable Google Wallet API in Google Cloud Console
-2. Create a service account
-3. Add service account credentials to `GOOGLE_WALLET_SERVICE_ACCOUNT_KEY`
-
-## Development
+### 5. Start Development
 
 ```bash
 pnpm dev
+# Visit http://localhost:3000
 ```
 
-Visit http://localhost:3000
-
-### Admin Interface
-
-The application includes a comprehensive admin interface with role-based access control:
+### 6. Access Admin Interface
 
 ```bash
-# Visit the admin interface
-http://localhost:3000/admin
-```
+# 1. Set admin secret in .env.local
+APP_EMULATOR_SECRET=your-secure-secret
 
-#### Admin + Role Emulator
-
-For development and testing, the admin interface uses a role emulator that allows you to simulate different user roles without real authentication.
-
-##### Setup
-
-1. **Set Emulator Secret** (required):
-   ```bash
-   # Add to your .env.local
-   APP_EMULATOR_SECRET=your-secure-secret-key-here
-   ```
-
-2. **Access Admin Emulator**:
-   Visit `/admin/emulator` to set your role and program context
-
-##### Available Roles
-
-- **super_admin**: Full access across all programs
-- **program_admin**: Full access within assigned program(s)  
-- **program_editor**: Edit templates, manage passes, send notifications (no secrets access)
-- **program_viewer**: Read-only access
-- **support**: Limited write access (reissue passes, resend install links)
-
-##### Admin Features
-
-**Dashboard** (`/admin`)
-- System KPIs and health metrics
-- Program-specific or cross-program statistics
-- Real-time activity monitoring
-
-**Programs** (`/admin/programs`)
-- List all programs (super_admin) or assigned program
-- Program configuration and branding editor
-- API key management (server-side only for security)
-
-**Templates** (`/admin/templates`)
-- JSON editor for Apple Wallet and Google Wallet templates
-- Template versioning with "Bump Version" functionality
-- Zod validation for template schemas
-
-**Participants** (`/admin/participants`)
-- Search participants by email or UUID
-- View participant details, points, and tier status
-- Actions: Reissue passes, resend Magic Install links
-
-**Passes** (`/admin/passes`)
-- View all wallet passes with sync status
-- Force update passes or expire them
-- Error monitoring and troubleshooting
-
-**Jobs** (`/admin/jobs`)
-- Monitor background job execution
-- View job payloads and error details
-- Retry failed jobs with permission checks
-
-**Webhooks** (`/admin/webhooks`)
-- View webhook event history
-- Pretty-print event payloads
-- Generate cURL commands for event replay
-
-##### Security Features
-
-- **Server-side permission checks**: All admin actions verify permissions server-side
-- **Secret redaction**: API keys are never sent to client, only server-side copy actions
-- **Signed JWT cookies**: Emulator uses cryptographically signed identity tokens
-- **Role-based UI**: Interface adapts based on user permissions
-
-##### Switching Programs
-
-Non-super-admin roles are scoped to specific programs. Super admins can:
-- View "All Programs" or scope to a specific program
-- Switch program context via the top bar program switcher
-
-##### Production Deployment
-
-When deploying to production:
-1. The emulator requires `APP_EMULATOR_SECRET` to be set
-2. Without the secret, a warning banner appears with degraded security
-3. The emulator can be disabled by implementing real authentication
-4. All admin routes are protected by middleware
-
-##### Development Workflow
-
-```bash
-# 1. Set your emulator secret
-echo "APP_EMULATOR_SECRET=dev-secret-123" >> .env.local
-
-# 2. Start development server
-pnpm dev
-
-# 3. Visit admin emulator
+# 2. Visit role emulator
 open http://localhost:3000/admin/emulator
 
-# 4. Choose role (e.g., super_admin) and optionally select program
-
-# 5. Access admin interface
-# You'll be redirected to /admin with your selected role
+# 3. Select "Super Admin" → Impersonate
+# 4. Access full admin at /admin
 ```
 
-The admin interface provides a complete management experience while maintaining security through proper permission checks and server-side validation.
+## Identity Model
 
-## API Endpoints
+Perk Wallet uses a **composite key architecture** that keeps internal implementation details private while exposing clean public interfaces.
 
-### Webhooks
-- `POST /api/webhooks/perk/{programId}` - Per-program webhook endpoints
-- `GET /api/debug` - Database status and program statistics
+### Core Concept
 
-### Pass Management
-- `POST /api/passes/issue` - Issue new passes for a participant
-- `PATCH /api/passes/[perk_uuid]` - Update existing passes
-- `POST /api/passes/[perk_uuid]/notify` - Send push notifications
+- **Internal**: Programs use UUID primary keys (`programs.id`)
+- **Public**: Routes use Perk Program IDs (`programs.perk_program_id`)
+- **Participants**: Composite key `(program_id UUID, perk_participant_id bigint)`
 
-### Installation
-- `GET /w/{programId}/{perkUuid}` - Universal magic link page
-- `POST /api/install-token` - Generate installation tokens
-
-### Apple Wallet Web Service
-- `POST /api/apple/register` - Register device
-- `DELETE /api/apple/unregister` - Unregister device
-- `GET /api/apple/passes` - Get updated passes
-- `POST /api/apple/log` - Log errors
-
-## Testing
-
-Run tests with Vitest:
+### Examples
 
 ```bash
-pnpm test
+# Public install route (uses Perk Program ID)
+/w/44/246785  # Program 44, Participant 246785
+
+# Admin redirect (Perk Program ID → UUID)
+/admin/p/44 → /admin/programs/3648cab8-a29f-4d13-9160-f1eab36e88bd
+
+# QR code format
+44.246785.loyalty  # programId.participantId.passKind
 ```
 
-Key test coverage:
-- QR code signing and verification
-- API retry logic with 429 backoff
-- Webhook idempotency
-- Pass generation
+### Database Schema
 
-## Deployment
+```mermaid
+erDiagram
+    programs ||--o{ participants : "program_id"
+    programs ||--o{ templates : "program_id"
+    programs ||--o{ template_drafts : "program_id"
+    programs ||--o{ webhook_events : "program_id"
+    participants ||--o{ passes : "(program_id, perk_participant_id)"
+    participants {
+        uuid program_id PK
+        bigint perk_participant_id PK
+        string email
+        integer points
+        integer unused_points
+        string status
+        string tier
+        jsonb profile_attributes
+    }
+    passes {
+        uuid id PK
+        uuid program_id FK
+        bigint perk_participant_id FK
+        string pass_kind
+        string apple_serial_number
+        string google_object_id
+        jsonb pass_data
+    }
+    programs {
+        uuid id PK
+        integer perk_program_id UK
+        string name
+        string api_key
+        jsonb settings
+        jsonb branding_fonts
+        jsonb branding_colors
+    }
+    templates {
+        uuid id PK
+        uuid program_id FK
+        string pass_kind
+        integer version
+        boolean is_active
+        jsonb apple_template
+        jsonb google_template
+    }
+    jobs {
+        uuid id PK
+        string type
+        string status
+        jsonb payload
+    }
+```
 
-### Vercel
+## Routes Overview
 
-1. Connect your GitHub repository to Vercel
-2. Add environment variables in Vercel dashboard
-3. Deploy:
+### Public Install Routes
+
+```bash
+# Universal install (default pass group)
+GET /w/{perkProgramId}/{perkParticipantId}
+
+# Specific pass type
+GET /w/{perkProgramId}/{perkParticipantId}/{passKind}
+
+# With resource context (QR codes)
+GET /w/{perkProgramId}/{perkParticipantId}/{passKind}/{resourceType}/{resourceId}
+```
+
+### Admin Routes
+
+```bash
+# Admin redirect (Perk Program ID → UUID)
+GET /admin/p/{perkProgramId}
+
+# Core admin pages
+GET /admin                    # Dashboard
+GET /admin/programs           # Program management
+GET /admin/templates          # Template editor
+GET /admin/participants       # Search participants
+GET /admin/passes             # Wallet pass monitoring
+GET /admin/jobs               # Background jobs
+GET /admin/webhooks           # Event history
+```
+
+### API Routes
+
+```bash
+# Diagnostics
+POST /api/admin/diagnostics/install    # System health checks
+
+# Webhooks (per-program)
+POST /api/webhooks/perk/{perkProgramId}
+
+# Pass management
+PATCH /api/passes/{perkProgramId}/{perkParticipantId}
+
+# Apple Wallet Web Service
+GET /api/apple-web-service/v1/passes/{passTypeIdentifier}/{serialNumber}
+POST /api/apple-web-service/v1/devices/{deviceId}/registrations/{passTypeId}/{serialNumber}
+```
+
+## Template Studio
+
+### Current Features (v0.6.0)
+
+- ✅ **Template Drafts**: Program-scoped draft management
+- ✅ **Multi-tab Editor**: Layout, Fields, Assets, Preview tabs
+- ✅ **Asset Upload**: Supabase Storage integration (5 asset types)
+- ✅ **Merge Tags**: 16+ dynamic content tags with validation
+- ✅ **Preview API**: Real participant data resolution
+- ✅ **Field Mapping**: Visual editor with autocomplete
+
+### Merge Tags
+
+```bash
+# Participant data
+{points}              # Total lifetime points
+{unused_points}       # Available balance
+{email}               # Email address
+{fname} {lname}       # First/last name
+{full_name}           # Combined name
+{tier} {status}       # Tier or status
+
+# Program context
+{program_name}        # Program name
+{perk_participant_id} # Participant ID
+
+# Custom attributes
+{profile.seat_section}  # Profile attributes
+{profile.favorite_team} # Dynamic profile data
+
+# Notification-specific
+{points_delta}        # Points change (+25)
+{new_points}          # New balance after change
+```
+
+### Planned Features
+
+- 🔄 **Live Device Previews**: Real wallet frame rendering
+- 🔄 **Template Publishing**: Draft → template workflow
+- 🔄 **Pass Regeneration**: Auto-update passes when templates change
+- 🔄 **Apple Class Creation**: Auto-generate Apple pass classes
+
+## Diagnostics
+
+Test system readiness with the diagnostics API:
+
+```bash
+curl -X POST "http://localhost:3000/api/admin/diagnostics/install" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "perk_program_id": 44,
+    "perk_participant_id": 246785,
+    "kinds": ["loyalty", "rewards"]
+  }'
+```
+
+**Expected Response:**
+
+```json
+{
+  "ok": true,
+  "participant": { "exists": true },
+  "checks": [
+    {
+      "kind": "loyalty",
+      "published_template": true,
+      "apple_ready": true,
+      "google_ready": true,
+      "qr_preview": "44.246785.loyalty",
+      "issues": []
+    }
+  ]
+}
+```
+
+## Deploy to Vercel
+
+### 1. Connect Repository
+
+1. Import your GitHub repo to Vercel
+2. Framework preset: **Next.js**
+3. Root directory: **.**
+
+### 2. Environment Variables
+
+Add all variables from `.env.example` to Vercel dashboard:
+
+```bash
+# Required in Vercel
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+PERK_API_KEY
+PERK_WEBHOOK_SECRET
+QR_SIGNING_SECRET
+APP_EMULATOR_SECRET
+# ... plus Apple/Google wallet credentials
+```
+
+### 3. Deploy
 
 ```bash
 vercel --prod
 ```
 
-### Database
+### 4. Configure Webhooks
 
-Ensure Supabase database is accessible from your deployment environment.
-
-## Multi-Program Architecture
-
-### Program Isolation
-
-Each program operates independently with:
-- Separate participant databases
-- Individual webhook endpoints
-- Isolated event tracking
-- Custom branding configuration
-
-### Program Branding
-
-Programs support comprehensive branding configuration:
-
-```typescript
-{
-  branding_fonts: {
-    header_font: "Inter",
-    body_font: "Inter"
-  },
-  branding_colors: {
-    brand_color: "#000000",
-    brand_text_color: "#FFFFFF",
-    secondary_color: "#666666",
-    // ... additional color options
-  },
-  branding_assets: {
-    logo_url: "https://example.com/logo.png",
-    hero_background_image_url: "https://example.com/hero.jpg",
-    // ... additional assets
-  },
-  branding_borders: {
-    button_border_radius: "Medium",
-    input_border_radius: "Medium",
-    tiles_border_radius: "Medium",
-    cards_border_radius: "Medium"
-  }
-}
-```
-
-### Event Tracking
-
-All webhook events are tracked in the `webhook_events` table with:
-- Full program context
-- Participant association
-- Event type classification
-- Complete event data payload
-- Idempotency keys for duplicate prevention
-
-## Webhook Events
-
-The system handles Perk webhook events via per-program endpoints:
-
-### Webhook Endpoint
+Update your Perk program settings with webhook URL:
 
 ```
-POST /api/webhooks/perk/{programId}
+https://your-domain.vercel.app/api/webhooks/perk/{perkProgramId}
 ```
 
-Where `{programId}` is the numeric Perk program ID (e.g., 44 for Buckeye Nation Rewards).
+## Concepts at a Glance
 
-### Supported Events
+- ✅ **Dual addressing**: UUIDs internal, Perk Program IDs at edges
+- ✅ **Composite identity**: (program_id, perk_participant_id) replaces perk_uuid
+- ✅ **Multi-tenant**: Complete program data isolation
+- ✅ **Real-time sync**: Webhook → pass update within 60 seconds
+- ✅ **Enterprise admin**: RBAC with 5 roles, comprehensive management
+- ✅ **Template studio**: Draft management, merge tags, asset uploads
+- ✅ **Notification merging**: 120s merge window, 300s throttling
+- ✅ **QR grammar**: `programId.participantId.passKind[.resourceType.resourceId]`
+- ✅ **Diagnostics**: Health checks for certificates, templates, participants
+- ✅ **Version tracking**: Git commit display, deployment verification
 
-- `participant_created`: Creates participant record and issues passes
-- `participant_points_updated`: Syncs points and updates loyalty pass  
-- `challenge_completed`: Refreshes participant data and awards points
-- `reward_earned`: Updates My Rewards pass and sends notification
-- Custom events: All event types are tracked and logged
+## Documentation
 
-### Webhook Examples
+- [Architecture Overview](./docs/ARCHITECTURE.md) - System design and request flow
+- [Routes Reference](./docs/ROUTES.md) - Complete API and route documentation
+- [Identity Model](./docs/IDENTITY.md) - Composite key architecture details
+- [Template Studio](./docs/TEMPLATE_STUDIO.md) - Template system guide
+- [Operations Guide](./docs/OPERATIONS.md) - Admin tasks and troubleshooting
+- [Environment Variables](./docs/ENV.md) - Complete environment reference
 
-#### Live Production Example (Buckeye Nation Rewards)
-```bash
-curl -i -X POST https://pass.perk.ooo/api/webhooks/perk/44 \
-  -H "Content-Type: application/json" \
-  -d '{"event":"participant_points_updated","data":{"participant":{"id":140699,"email":"user@example.com","points":1350,"unused_points":1350}}}'
-```
+## Current Version: v0.6.0
 
-#### Participant Created
-```bash
-curl -i -X POST https://pass.perk.ooo/api/webhooks/perk/44 \
-  -H "Content-Type: application/json" \
-  -d '{"event":"participant_created","data":{"participant":{"id":140700,"email":"newuser@example.com","points":0}}}'
-```
+**Identity model locked** ✅ Diagnostics and install routes verified ✅ Templates published for program 44 ✅
 
-#### Challenge Completed
-```bash
-curl -i -X POST https://pass.perk.ooo/api/webhooks/perk/44 \
-  -H "Content-Type: application/json" \
-  -d '{"event":"challenge_completed","data":{"participant":{"id":140699,"email":"user@example.com","points":1550},"challenge":{"id":10001491,"points":200,"challenge_type":"signup"}}}'
-```
-
-#### Reward Earned
-```bash
-curl -i -X POST https://pass.perk.ooo/api/webhooks/perk/44 \
-  -H "Content-Type: application/json" \
-  -d '{"event":"reward_earned","data":{"participant":{"id":140699,"email":"user@example.com"},"reward":{"id":669,"name":"character blanket","selection":"redeem"}}}'
-```
-
-## Pass Structure
-
-### Loyalty Pass
-- Primary field: Points balance
-- Secondary field: Tier status
-- Grouped by program ID
-- QR code with signed participant UUID
-
-### My Rewards Pass
-- Primary field: Available rewards count
-- Secondary field: Active status
-- Grouped with loyalty pass
-- Same QR code as loyalty pass
-
-## Security
-
-- Webhook signatures verified with HMAC-SHA256
-- QR codes signed with TTL validation
-- API keys stored securely in environment
-- No secrets stored in Perk profile attributes
-
-## Monitoring
-
-Key metrics to monitor:
-- Webhook processing latency per program
-- Pass update success rate
-- API rate limit hits
-- QR code verification failures
-- Program statistics via `/api/debug` endpoint
-
-### Debug Endpoint
-
-The `/api/debug` endpoint provides comprehensive system status:
-
-```bash
-curl https://pass.perk.ooo/api/debug
-```
-
-Returns:
-- Database connection status
-- Program configurations with branding
-- Recent participants and webhook events
-- Program statistics (participant count, event count, last activity)
-- Multi-program status confirmation
-
-## Support
-
-For issues and questions:
-- GitHub Issues: [your-repo/issues]
-- Documentation: [docs-link]
-- Perk API Docs: https://perk.studio/docs
-
-## Participant Mapping and Points Defaults
-
-### Points Display Configuration
-
-By default, wallet passes and notifications display **Unused Points** (available to spend) rather than total lifetime points. This can be configured per program:
-
-1. **Admin Configuration**: 
-   - Go to `/admin/programs/{id}` → Edit Settings tab
-   - Under "Points Display Configuration", choose between:
-     - **Unused Points** (default): Shows available balance for redemption
-     - **Total Points**: Shows all-time earned points
-
-2. **Programmatic Access**:
-   ```typescript
-   // Read program setting (defaults to 'unused_points')
-   const pointsDisplay = program.settings?.points_display || 'unused_points';
-   
-   // Use in pass builders and notifications
-   const currentPoints = pointsDisplay === 'points' 
-     ? participant.points 
-     : participant.unused_points;
-   ```
-
-### Participant Data Mapping
-
-The system normalizes Perk participant data into a consistent `ParticipantSnapshot`:
-
-```typescript
-interface ParticipantSnapshot {
-  perk_participant_id: number;
-  perk_uuid: string;
-  email: string | null;
-  points: number;
-  unused_points: number;
-  status: string | null;
-  tier: string | null;  // Falls back to status if tier is null
-  fname: string | null;
-  lname: string | null;
-  tag_list: string[];
-  profile: Record<string, unknown>;
-}
-```
-
-### Merge Tags for Templates
-
-Templates support dynamic content replacement using merge tags:
-
-#### Supported Tags
-- `{points}` - Total lifetime points
-- `{unused_points}` - Available balance
-- `{status}` - Participant status
-- `{tier}` - Tier (or status if tier is null)
-- `{email}` - Email address
-- `{fname}` / `{lname}` - First/last name
-- `{full_name}` - Combined first + last name
-- `{program_name}` - Program name
-- `{profile.*}` - Profile attributes (e.g., `{profile.seat_section}`)
-- `{points_delta}` - Points change amount (notifications only)
-- `{new_points}` - New balance after change (notifications only)
-
-#### Example Usage
-```typescript
-// Notification template
-const template = "You gained {points_delta} points! New balance: {new_points}";
-
-// Resolves to: "You gained +25 points! New balance: 150"
-```
-
-### Notification Merge Window and Throttling
-
-Rapid point updates are automatically merged to prevent notification spam:
-
-#### Merge Window (default: 120 seconds)
-- Multiple point updates within the window are combined into one notification
-- Shows total change from first to last event
-- Prevents overwhelming users with rapid updates
-
-#### Throttling (default: 300 seconds)
-- Prevents duplicate notifications for the same participant+rule
-- Applies after merge window expires
-- Tracks last notification sent time
-
-#### Example: 5 Updates in 90 Seconds
-```typescript
-// Input: 5 separate +5 point events over 90 seconds
-// Result: Single notification "You gained +25 points! New balance: 125"
-```
-
-### Admin Testing: Simulate Points Burst
-
-For development and testing, admins can simulate rapid point updates:
-
-1. **Access**: Visit `/admin/participants/{perk_uuid}` (development only)
-2. **Permissions**: Requires super_admin or program_admin role
-3. **Configuration**:
-   - **Total Events**: Number of simulated updates (1-20)
-   - **Points Per Event**: Points to add per update (+1 to +100)
-   - **Duration**: Time to spread events over (10-300 seconds)
-
-4. **Behavior**:
-   - Generates synthetic notification events without affecting Perk balances
-   - Tests merge window and throttle functionality
-   - Creates job records to track buffer collapse
-   - Links to `/admin/jobs` to monitor processing
-
-### How It Works
-
-1. **Webhook Processing**: 
-   - Fetches latest participant data from Perk API
-   - Normalizes to `ParticipantSnapshot` format
-   - Updates database with all participant fields
-
-2. **Pass Building**:
-   - Uses `ParticipantSnapshot` interface
-   - Applies program's `points_display` setting
-   - Handles tier fallback to status automatically
-
-3. **Notifications**:
-   - Queues events in memory buffer
-   - Merges rapid updates within window
-   - Sends single notification with total delta
-   - Respects throttle limits per participant+rule
-
-4. **Template Validation**:
-   - Checks for unknown merge tags
-   - Warns about missing profile attributes
-   - Validates tag syntax in admin interface
-
-## Version History
-
-### Latest: v0.3.1 (2025-08-12)
-- **Schema Standardization**: Fixed templates.pass_type → pass_kind for consistency with passes table
-- **Enhanced Documentation**: Updated CLAUDE.md and README with comprehensive feature mapping
-- **Database Schema Documentation**: Complete mapping of participants table enhancements
-- **File Structure Updates**: Documented new /src/lib/perk/ directory and notification system files
-
-### v0.3.0 (2025-08-12)
-- **Participant Data Alignment**: Normalized ParticipantSnapshot interface with Perk API
-- **Points Display Configuration**: Per-program setting for unused_points vs total points
-- **Merge Tag System**: Template support with validation and 16 supported tags
-- **Notification Merging**: 120s merge window and 300s throttling for rapid updates
-- **Admin Testing Tools**: Simulate points burst feature for throttle testing
-- **Enhanced Pass Builders**: Updated Apple/Google builders to use ParticipantSnapshot
-- **Comprehensive Testing**: Unit tests for normalization, merge tags, and notifications
-
-### v0.2.0 (2025-08-12)
-- Complete Admin Interface with Role-Based Access Control
-- Program Management System with API validation
-- Status management (draft/active/inactive)
-- Real-time Supabase data integration
-- Version indicator for deployment tracking
-- 7 admin pages: Dashboard, Programs, Templates, Participants, Passes, Jobs, Webhooks
-- Multi-tenant architecture fully implemented
-
-### v0.1.0 (Initial Release)
-- Core pass issuance functionality
-- Webhook processing
-- QR code generation
-- Magic links
+See [CHANGELOG.md](./CHANGELOG.md) for version history and [STATE.md](./STATE.md) for current development status.
 
 ---
-Last updated: 2025-08-12 - See CLAUDE.md for detailed implementation notes
+
+**Production URL**: https://pass.perk.ooo  
+**Repository**: [GitHub](https://github.com/your-org/perk-wallet)  
+**Documentation**: [Docs](./docs/)  
+**Support**: [Issues](https://github.com/your-org/perk-wallet/issues)
