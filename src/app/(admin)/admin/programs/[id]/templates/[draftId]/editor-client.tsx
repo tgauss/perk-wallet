@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Input } from '@/components/ui/input'
 import { 
   Save, 
   Upload, 
@@ -28,6 +29,7 @@ import {
 import { updateDraft, publishDraft, ensurePassAssetsBucket } from './actions'
 import type { DraftUpdateResult, PublishResult } from './actions'
 import { uploadAsset, type AssetKind, type UploadAssetResult } from './upload-action'
+import { MERGE_TAGS, getMergeTagSuggestions, type MergeTag } from '@/lib/merge-tags'
 
 // Types
 interface TemplateDraft {
@@ -96,6 +98,26 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
   const [previewMode, setPreviewMode] = useState<'apple' | 'google'>('apple')
   const [uploadingAssets, setUploadingAssets] = useState<Set<AssetKind>>(new Set())
   const [currentAssets, setCurrentAssets] = useState<Record<string, any>>(draft.assets)
+  
+  // Field mapping state
+  const [fieldMappings, setFieldMappings] = useState({
+    headerText: 'Welcome {name}!',
+    primary1Label: 'Points Available',
+    primary1Value: '{unused_points}',
+    primary2Label: 'Member Status',
+    primary2Value: '{tier}',
+    pointsLabel: 'Total Points',
+    pointsValue: '{points}'
+  })
+  const [previewData, setPreviewData] = useState<any>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const previewTimeoutRef = useRef<NodeJS.Timeout>()
+
+  // Load initial preview data
+  useEffect(() => {
+    updatePreview()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFormatJSON = (type: 'layout' | 'assets') => {
     if (type === 'layout') {
@@ -229,6 +251,200 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to remove asset')
     }
+  }
+
+  // Field mapping functions
+  const updateFieldMapping = (field: string, value: string) => {
+    setFieldMappings(prev => ({ ...prev, [field]: value }))
+    debouncedPreviewUpdate()
+  }
+
+  const debouncedPreviewUpdate = useCallback(() => {
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current)
+    }
+    previewTimeoutRef.current = setTimeout(() => {
+      updatePreview()
+    }, 400)
+  }, [])
+
+  const updatePreview = async () => {
+    setPreviewLoading(true)
+    setPreviewError(null)
+    
+    try {
+      const response = await fetch('/api/admin/templates/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          program_id: programId,
+          draft_id: draft.id
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.ok) {
+        setPreviewData(result.resolved)
+      } else {
+        setPreviewError(result.error)
+      }
+    } catch (error) {
+      setPreviewError('Failed to load preview')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  const applyFieldMappingsToLayout = async () => {
+    const currentLayout = parseJSON(layoutJson)
+    if (!currentLayout.success) {
+      setErrorMessage('Invalid layout JSON. Please fix before applying field mappings.')
+      return
+    }
+
+    // Create a basic layout structure with field mappings
+    const enhancedLayout = {
+      ...currentLayout.data,
+      fieldMappings,
+      header: {
+        ...currentLayout.data.header,
+        text: fieldMappings.headerText
+      },
+      fields: [
+        {
+          label: fieldMappings.primary1Label,
+          value: fieldMappings.primary1Value,
+          type: 'primary'
+        },
+        {
+          label: fieldMappings.primary2Label, 
+          value: fieldMappings.primary2Value,
+          type: 'primary'
+        },
+        {
+          label: fieldMappings.pointsLabel,
+          value: fieldMappings.pointsValue,
+          type: 'auxiliary'
+        }
+      ]
+    }
+
+    setLayoutJson(formatJSON(enhancedLayout))
+    
+    // Save to database
+    const result = await updateDraft(draft.id, {
+      layout: enhancedLayout
+    })
+
+    if (result.ok) {
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    } else {
+      setErrorMessage(result.error)
+    }
+  }
+
+  // Merge tag autocomplete component
+  const MergeTagInput = ({ 
+    value, 
+    onChange, 
+    placeholder, 
+    label 
+  }: { 
+    value: string; 
+    onChange: (value: string) => void; 
+    placeholder?: string;
+    label?: string;
+  }) => {
+    const [showSuggestions, setShowSuggestions] = useState(false)
+    const [suggestions, setSuggestions] = useState<MergeTag[]>([])
+    const [cursorPosition, setCursorPosition] = useState(0)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value
+      const position = e.target.selectionStart || 0
+      setCursorPosition(position)
+      onChange(newValue)
+      
+      // Check if we should show suggestions (typing '{' or after '{')
+      const beforeCursor = newValue.slice(0, position)
+      const lastBraceIndex = beforeCursor.lastIndexOf('{')
+      
+      if (lastBraceIndex !== -1 && !beforeCursor.slice(lastBraceIndex).includes('}')) {
+        const partial = beforeCursor.slice(lastBraceIndex + 1)
+        const filteredSuggestions = getMergeTagSuggestions(partial)
+        setSuggestions(filteredSuggestions)
+        setShowSuggestions(true)
+      } else {
+        setShowSuggestions(false)
+      }
+    }
+
+    const insertTag = (tag: string) => {
+      const beforeCursor = value.slice(0, cursorPosition)
+      const afterCursor = value.slice(cursorPosition)
+      const lastBraceIndex = beforeCursor.lastIndexOf('{')
+      
+      if (lastBraceIndex !== -1) {
+        const newValue = value.slice(0, lastBraceIndex) + tag + afterCursor
+        onChange(newValue)
+        setShowSuggestions(false)
+        
+        // Focus input and set cursor after inserted tag
+        setTimeout(() => {
+          if (inputRef.current) {
+            const newPosition = lastBraceIndex + tag.length
+            inputRef.current.focus()
+            inputRef.current.setSelectionRange(newPosition, newPosition)
+          }
+        }, 0)
+      }
+    }
+
+    return (
+      <div className="relative">
+        {label && <Label className="text-sm font-medium">{label}</Label>}
+        <Input
+          ref={inputRef}
+          value={value}
+          onChange={handleInputChange}
+          placeholder={placeholder}
+          className="font-mono text-sm"
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          onFocus={() => {
+            // Re-check for suggestions on focus
+            const position = inputRef.current?.selectionStart || 0
+            const beforeCursor = value.slice(0, position)
+            const lastBraceIndex = beforeCursor.lastIndexOf('{')
+            
+            if (lastBraceIndex !== -1 && !beforeCursor.slice(lastBraceIndex).includes('}')) {
+              const partial = beforeCursor.slice(lastBraceIndex + 1)
+              const filteredSuggestions = getMergeTagSuggestions(partial)
+              setSuggestions(filteredSuggestions)
+              setShowSuggestions(true)
+            }
+          }}
+        />
+        
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                onClick={() => insertTag(suggestion.tag)}
+              >
+                <div className="font-mono text-sm text-blue-600">{suggestion.tag}</div>
+                <div className="text-xs text-gray-500">{suggestion.label}</div>
+                <div className="text-xs text-gray-400">{suggestion.example}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
   }
 
   // Asset uploader component
@@ -432,49 +648,99 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
                   <span>Field Mapping</span>
                 </CardTitle>
                 <CardDescription>
-                  Configure how participant data maps to template fields
+                  Configure common template fields with merge tags. Type {`{`} to see available tags.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Field mapping interface coming soon. Available mappings will include:
-                    </AlertDescription>
-                  </Alert>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column: Field Mappers */}
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <MergeTagInput
+                        label="Header Text"
+                        value={fieldMappings.headerText}
+                        onChange={(value) => updateFieldMapping('headerText', value)}
+                        placeholder="Welcome {name}!"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <MergeTagInput
+                        label="Primary Field 1 - Label"
+                        value={fieldMappings.primary1Label}
+                        onChange={(value) => updateFieldMapping('primary1Label', value)}
+                        placeholder="Points Available"
+                      />
+                      <MergeTagInput
+                        label="Primary Field 1 - Value"
+                        value={fieldMappings.primary1Value}
+                        onChange={(value) => updateFieldMapping('primary1Value', value)}
+                        placeholder="{unused_points}"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <MergeTagInput
+                        label="Primary Field 2 - Label"
+                        value={fieldMappings.primary2Label}
+                        onChange={(value) => updateFieldMapping('primary2Label', value)}
+                        placeholder="Member Status"
+                      />
+                      <MergeTagInput
+                        label="Primary Field 2 - Value"
+                        value={fieldMappings.primary2Value}
+                        onChange={(value) => updateFieldMapping('primary2Value', value)}
+                        placeholder="{tier}"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <MergeTagInput
+                        label="Points Field - Label"
+                        value={fieldMappings.pointsLabel}
+                        onChange={(value) => updateFieldMapping('pointsLabel', value)}
+                        placeholder="Total Points"
+                      />
+                      <MergeTagInput
+                        label="Points Field - Value"
+                        value={fieldMappings.pointsValue}
+                        onChange={(value) => updateFieldMapping('pointsValue', value)}
+                        placeholder="{points}"
+                      />
+                    </div>
+                    
+                    <div className="pt-4">
+                      <Button 
+                        onClick={applyFieldMappingsToLayout}
+                        className="w-full"
+                        disabled={saveStatus === 'saving'}
+                      >
+                        Apply to Layout
+                      </Button>
+                    </div>
+                  </div>
                   
-                  <div className="grid gap-3">
-                    <div className="flex items-center justify-between p-3 border rounded-lg opacity-60">
-                      <div>
-                        <div className="font-medium">Points Display</div>
-                        <div className="text-sm text-muted-foreground">points → unused_points</div>
-                      </div>
-                      <Badge variant="outline">Coming Soon</Badge>
+                  {/* Right Column: Available Tags Reference */}
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium">Available Merge Tags</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Click any tag to copy to clipboard
+                      </p>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 border rounded-lg opacity-60">
-                      <div>
-                        <div className="font-medium">Participant Name</div>
-                        <div className="text-sm text-muted-foreground">fname, lname → full_name</div>
-                      </div>
-                      <Badge variant="outline">Coming Soon</Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 border rounded-lg opacity-60">
-                      <div>
-                        <div className="font-medium">Tier & Status</div>
-                        <div className="text-sm text-muted-foreground">tier, status → dynamic badges</div>
-                      </div>
-                      <Badge variant="outline">Coming Soon</Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 border rounded-lg opacity-60">
-                      <div>
-                        <div className="font-medium">Dynamic Links</div>
-                        <div className="text-sm text-muted-foreground">QR codes, web passes</div>
-                      </div>
-                      <Badge variant="outline">Coming Soon</Badge>
+                    <div className="max-h-80 overflow-y-auto space-y-2">
+                      {MERGE_TAGS.map((tag, index) => (
+                        <div 
+                          key={index}
+                          className="p-2 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => navigator.clipboard?.writeText(tag.tag)}
+                        >
+                          <div className="font-mono text-sm text-blue-600">{tag.tag}</div>
+                          <div className="text-xs text-muted-foreground">{tag.label}</div>
+                          <div className="text-xs text-gray-400">Example: {tag.example}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -590,7 +856,9 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
                               </div>
                             )}
                             <div className="flex-1">
-                              <div className="text-sm font-medium">Pass Title</div>
+                              <div className="text-sm font-medium">
+                                {previewData?.header?.text || fieldMappings.headerText || 'Pass Title'}
+                              </div>
                               <div className="text-xs text-muted-foreground capitalize">
                                 {draft.pass_kind} Pass
                               </div>
@@ -611,15 +879,59 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
                             }}
                           >
                             {currentAssets.background || currentAssets.strip ? (
-                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                <div className="text-white text-xs">Preview Content</div>
+                              <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-center text-white">
+                                <div className="space-y-1 text-center">
+                                  {previewLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                                  ) : previewError ? (
+                                    <div className="text-red-200 text-xs">{previewError}</div>
+                                  ) : previewData?.fields ? (
+                                    <div className="space-y-1">
+                                      {previewData.fields.slice(0, 2).map((field: any, index: number) => (
+                                        <div key={index} className="text-xs">
+                                          <span className="opacity-75">{field.label}: </span>
+                                          <span className="font-medium">{field.value}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs">Field mappings will appear here</div>
+                                  )}
+                                </div>
                               </div>
                             ) : (
-                              <div className="space-y-1">
-                                <Palette className="w-6 h-6 text-muted-foreground mx-auto" />
-                                <div className="text-xs text-muted-foreground">
-                                  Upload assets to see preview
-                                </div>
+                              <div className="space-y-2">
+                                {previewLoading ? (
+                                  <div className="space-y-1">
+                                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mx-auto" />
+                                    <div className="text-xs text-muted-foreground text-center">
+                                      Loading preview...
+                                    </div>
+                                  </div>
+                                ) : previewError ? (
+                                  <div className="space-y-1">
+                                    <AlertCircle className="w-6 h-6 text-red-500 mx-auto" />
+                                    <div className="text-xs text-red-500 text-center">
+                                      {previewError}
+                                    </div>
+                                  </div>
+                                ) : previewData?.fields ? (
+                                  <div className="space-y-2">
+                                    {previewData.fields.map((field: any, index: number) => (
+                                      <div key={index} className="text-center">
+                                        <div className="text-xs text-muted-foreground">{field.label}</div>
+                                        <div className="text-sm font-medium">{field.value}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1">
+                                    <Palette className="w-6 h-6 text-muted-foreground mx-auto" />
+                                    <div className="text-xs text-muted-foreground text-center">
+                                      Configure fields to see preview
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -638,6 +950,30 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+                
+                {/* Preview Status */}
+                <div className="mt-4 text-center">
+                  <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+                    {previewLoading && (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Updating preview...</span>
+                      </>
+                    )}
+                    {previewError && (
+                      <>
+                        <AlertCircle className="w-3 h-3 text-red-500" />
+                        <span className="text-red-500">Preview failed: {previewError}</span>
+                      </>
+                    )}
+                    {!previewLoading && !previewError && previewData && (
+                      <>
+                        <CheckCircle className="w-3 h-3 text-green-500" />
+                        <span>Preview updated with resolved data</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
