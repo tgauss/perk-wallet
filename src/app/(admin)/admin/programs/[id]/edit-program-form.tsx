@@ -38,6 +38,7 @@ export default function EditProgramForm({ program }: EditProgramFormProps) {
     
     // Settings
     points_display: (program.settings as any)?.points_display || 'unused_points',
+    default_install_group: (program.settings as any)?.default_install_group || 'loyalty+rewards',
     
     // Branding
     branding_colors: program.branding_colors,
@@ -62,6 +63,7 @@ export default function EditProgramForm({ program }: EditProgramFormProps) {
         settings: {
           ...(program.settings || {}),
           points_display: formData.points_display,
+          default_install_group: formData.default_install_group,
         },
         branding_colors: formData.branding_colors,
         branding_assets: formData.branding_assets,
@@ -227,15 +229,15 @@ export default function EditProgramForm({ program }: EditProgramFormProps) {
         </CardContent>
       </Card>
 
-      {/* Points Display Configuration */}
+      {/* Pass & Install Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Points Display Configuration</CardTitle>
+          <CardTitle>Pass & Install Configuration</CardTitle>
           <CardDescription>
-            Configure which points field to display in wallet passes and notifications
+            Configure points display and default install behavior
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="points_display">Current Points Field</Label>
             <Select
@@ -255,6 +257,32 @@ export default function EditProgramForm({ program }: EditProgramFormProps) {
             <p className="text-xs text-muted-foreground">
               This affects what is shown in wallet passes and notification messages for point changes.
               Default is "Unused Points" which shows available points that can be redeemed.
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="default_install_group">Default Install Group</Label>
+            <Select
+              value={formData.default_install_group}
+              onValueChange={(value: 'loyalty+rewards' | 'loyalty' | 'rewards') => 
+                setFormData(prev => ({ ...prev, default_install_group: value }))
+              }
+            >
+              <SelectTrigger id="default_install_group">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="loyalty+rewards">Both Loyalty + Rewards</SelectItem>
+                <SelectItem value="loyalty">Loyalty Only</SelectItem>
+                <SelectItem value="rewards">Rewards Only</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              When users visit install links without specifying a pass type (e.g., /w/44/246785), 
+              this setting determines which wallet passes they'll receive. Individual pass links 
+              (e.g., /w/44/246785/loyalty) still work as expected.
             </p>
           </div>
         </CardContent>

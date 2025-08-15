@@ -2,10 +2,10 @@
 
 **Last Updated**: 2025-08-15  
 **Production URL**: https://pass.perk.ooo  
-**Latest Version**: v0.6.0
+**Latest Version**: v0.7.0
 **Identity Model**: Locked ✅
 
-## Major Features (v0.6.0 Status)
+## Major Features (v0.7.0 Status)
 
 ### ✅ Identity Model Locked
 
@@ -39,20 +39,14 @@
 - **File upload**: Supabase Storage integration
 - **Theme Doctor**: Diagnostics for QA testing
 
-### ✅ Template Editor with Merge Tags and Preview API Live
+### ✅ Template Studio v0.7.0 Complete
 
-- **Multi-tab editor**: Layout, Fields, Assets, Preview tabs
-- **Syntax highlighting**: JSON editor with validation
-- **Asset management**: Upload, replace, remove workflow
-- **Field mapping**: Visual editor with autocomplete
-- **Real-time preview**: API-driven with participant data
-
-### 🔄 Live Device Previews: Planned
-
-- **Apple Wallet frames**: Real iOS wallet UI rendering
-- **Google Wallet frames**: Android wallet UI rendering
-- **Device simulation**: iPhone/Android device previews
-- **Interactive preview**: Tap/swipe gesture support
+- **Live Device Previews**: Apple/Google wallet rendering with device chrome
+- **Field Mapping**: Visual editor with merge tag autocomplete and validation
+- **Asset Validator**: Smart validation with recommendations and usage detection
+- **Publishing Workflow**: Version management with change summaries
+- **Program Settings**: Default install group configuration
+- **Analytics Hooks**: Debug mode tracking for user interactions
 
 ### ⚠️ Wallet Provider Credentials: Pending
 
@@ -175,11 +169,11 @@ const resolved = await resolveProgram(44);
 - **Developer onboarding**: README overhaul, setup instructions
 - **Operational procedures**: Admin tasks, troubleshooting, monitoring
 
-### Immediate Next Steps (v0.6.1+)
+### Immediate Next Steps (v0.8.0+)
 
-1. **Live device previews**: Apple/Google wallet frame rendering
-2. **Template publishing workflow**: Draft → template promotion
-3. **Pass regeneration**: Auto-update passes when templates change
+1. **Template publishing backend**: Implement draft → template promotion APIs
+2. **Pass regeneration**: Auto-update passes when templates change
+3. **Template library**: Reusable layouts and component sharing
 4. **Apple class creation**: Auto-generate Apple pass classes
 
 ### Technical Debt
@@ -290,6 +284,6 @@ GOOGLE_WALLET_SERVICE_ACCOUNT_KEY
 
 ---
 
-**Next Version Target**: v0.6.1 (Documentation release)  
-**Next Feature Target**: v0.7.0 (Live device previews + template publishing)  
+**Next Version Target**: v0.8.0 (Template library + publishing backend)  
+**Next Feature Target**: v0.9.0 (Collaborative editing)  
 **Production Readiness**: ✅ Ready with proper certificate configuration

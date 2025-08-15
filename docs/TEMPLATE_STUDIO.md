@@ -6,7 +6,7 @@ Complete guide to the template editing system, merge tags, and preview functiona
 
 Template Studio provides a comprehensive editing environment for wallet pass templates with real-time preview, asset management, and dynamic content via merge tags.
 
-## Current Features (v0.6.0)
+## Current Features (v0.7.0)
 
 ### ✅ Template Drafts System
 
@@ -17,17 +17,18 @@ Template Studio provides a comprehensive editing environment for wallet pass tem
 
 ### ✅ Multi-tab Editor Interface
 
-- **Layout Tab**: JSON editor with syntax highlighting and validation
-- **Fields Tab**: Visual field mapping with autocomplete
-- **Assets Tab**: File upload and management interface
-- **Preview Tab**: Real-time preview with participant data
-- **Publish Tab**: Template publishing workflow (planned)
+- **Fields Tab**: Visual field mapping with merge tag autocomplete and validation
+- **Assets Tab**: File upload with smart validation and recommendations
+- **Preview Tab**: Live device previews with Apple/Google wallet rendering
+- **Publish Tab**: Complete version management and publishing workflow
 
 ### ✅ Asset Upload System
 
-- **5 Asset Types**: logo, icon, strip, background, googleCover
+- **5 Asset Types**: logo, icon, strip, background, hero image
+- **Smart Validation**: Automatic size, format, and aspect ratio checking
+- **Recommended Specs**: Clear guidance with usage warnings
 - **Supabase Storage**: Organized in `pass-assets` bucket
-- **File Validation**: PNG, JPG, JPEG, WebP up to 5MB
+- **File Validation**: PNG, JPG, JPEG, SVG, WebP up to specified limits
 - **Replace/Remove**: Full asset lifecycle management
 
 ### ✅ Merge Tags (16+ Dynamic Tags)
@@ -47,9 +48,86 @@ Template Studio provides a comprehensive editing environment for wallet pass tem
 ### ✅ Field Mapping UI
 
 - **Visual Editor**: Common template fields with autocomplete
+- **Merge Tag Palette**: Searchable catalog with live examples
+- **Inline Validation**: Real-time unknown tag detection with warnings
+- **Autocomplete**: @ or { triggers merge tag insertion
 - **Apply to Layout**: Direct integration with layout JSON
-- **Reference Panel**: Shows all available merge tags
-- **Validation**: Real-time validation of field values
+
+### ✅ Live Device Previews (NEW v0.7.0)
+
+- **Apple/Google Rendering**: Pixel-perfect wallet pass previews
+- **Device Chrome**: Optional iPhone/Android frames with zoom controls
+- **Real-time Updates**: 300-400ms debounced preview refresh
+- **Design Overlays**: Grid overlay and safe area indicators
+- **Theme Integration**: Uses program branding tokens (colors, fonts, borders)
+
+### ✅ Publishing Workflow (NEW v0.7.0)
+
+- **Version Management**: Automatic version incrementing per program/pass type
+- **Change Summary**: Clear overview of modified fields and assets
+- **Update Control**: Toggle to update existing wallet passes on publish
+- **Release Notes**: Optional message field for version tracking
+- **Impact Preview**: Shows affected passes before publishing
+
+### ✅ Program Settings Integration (NEW v0.7.0)
+
+- **Default Install Group**: Configure which passes users receive on generic install links
+  - `loyalty+rewards` (default): Both loyalty and rewards passes
+  - `loyalty`: Loyalty pass only  
+  - `rewards`: Rewards pass only
+- **Points Display**: Choose between total points or unused points for templates
+
+### ✅ Analytics & Debug Mode (NEW v0.7.0)
+
+- **Debug Logging**: Console tracking when `NEXT_PUBLIC_ANALYTICS_DEBUG=true`
+- **Event Tracking**: User interactions (save, publish, zoom, device toggle, etc.)
+- **Session Management**: Unique session IDs for debugging user flows
+- **Performance Monitoring**: Track preview generation and API response times
+
+## Template Studio v0.7.0 Usage Guide
+
+### Accessing the Editor
+- **Program Templates**: Navigate to `/admin/programs/[uuid]/templates`
+- **Draft Editor**: Click "Edit" on existing template or "New Template"
+- **Direct Link**: `/admin/programs/[uuid]/templates/[draftId]`
+
+### Editor Interface
+The Template Studio uses a tabbed interface with live preview sidebar:
+
+1. **Fields Tab**: Configure header, primary, and secondary fields with merge tag support
+2. **Assets Tab**: Upload and validate images (logo, background, hero, etc.)
+3. **Preview Tab**: Full-screen device preview with controls
+4. **Publish Tab**: Version management and publishing workflow
+
+### Keyboard Shortcuts
+- `⌘/Ctrl + S`: Manual save (auto-save also happens on blur/idle)
+- `⌘/Ctrl + K`: Open merge tag palette
+- `?`: Open quick help modal
+
+### Preview Controls
+- **Device Toggle**: Switch between Apple and Google wallet styles
+- **Zoom Levels**: 75%, 100%, 125%, 150% with "Fit" option
+- **Device Chrome**: Toggle iPhone/Android frame on/off
+- **Grid Overlay**: 8px alignment grid for precise positioning
+- **Safe Area**: Visual boundaries for content placement
+
+### Asset Specifications
+| Asset Type | Recommended Size | Aspect Ratio | Formats | Max Size |
+|------------|------------------|--------------|---------|----------|
+| Logo | 480×480px | 1:1 | PNG, SVG | 2MB |
+| Strip Image | 640×246px | 2.6:1 | PNG, JPG | 1MB |
+| Background | 640×1136px | 9:16 | PNG, JPG | 3MB |
+| Hero Image | 1032×336px | 3:1 | PNG, JPG | 2MB |
+| Icon | 192×192px | 1:1 | PNG | 512KB |
+
+### Merge Tag Reference
+- `{points}` - Total lifetime points
+- `{unused_points}` - Available balance for redemption
+- `{tier}` - Participant tier (Gold, Silver, etc.)
+- `{fname}`, `{lname}`, `{full_name}` - Name fields
+- `{email}` - Email address
+- `{program_name}` - Program display name
+- `{profile.*}` - Custom profile attributes (e.g., `{profile.favorite_team}`)
 
 ## Template Draft Management
 

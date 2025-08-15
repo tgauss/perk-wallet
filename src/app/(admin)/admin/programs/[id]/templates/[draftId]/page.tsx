@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
-import { EditorClient } from './editor-client'
+import { TemplateStudio } from '@/components/template-studio'
+import { ProgramThemeProvider } from '@/components/branding/program-theme-provider'
 
 // Types
 interface TemplateDraft {
@@ -57,29 +58,11 @@ export default async function TemplateEditorPage({ params }: TemplateEditorPageP
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header with back button */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/admin/programs/${programId}/templates`}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Templates
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Template Editor
-            </h1>
-            <p className="text-muted-foreground">
-              Edit {draft.pass_kind} template draft
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Editor component */}
-      <EditorClient draft={draft} programId={programId} />
-    </div>
+    <ProgramThemeProvider programId={programId}>
+      <TemplateStudio 
+        programId={programId} 
+        draftId={draftId} 
+      />
+    </ProgramThemeProvider>
   )
 }
