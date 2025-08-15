@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
-import { TemplateStudio } from '@/components/template-studio'
+import { TemplateDesigner } from '@/components/template-studio-v2/template-designer'
 import { ProgramThemeProvider } from '@/components/branding/program-theme-provider'
 
 // Types
@@ -59,7 +59,7 @@ export default async function TemplateEditorPage({ params }: TemplateEditorPageP
 
   return (
     <ProgramThemeProvider programId={programId}>
-      <TemplateStudio 
+      <TemplateDesigner 
         programId={programId} 
         draftId={draftId} 
       />
