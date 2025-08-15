@@ -41,89 +41,108 @@ export function PassPreview({ device, design, className }: PassPreviewProps) {
 
   if (device === 'ios') {
     return (
-      <div className={cn('bg-black rounded-3xl p-3 shadow-2xl', className)}>
+      <div className={cn('bg-black rounded-3xl p-3 shadow-2xl max-w-sm', className)}>
         {/* Status Bar */}
         <div className="text-white text-xs px-4 py-2 flex justify-between items-center">
           <span className="font-medium">9:41</span>
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-3" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M2 17h20v2H2zm1.15-4.05L4 11.47l.85 1.48 1.3-.75-.85-1.48zm17.7.75l.85 1.48L23 13.7l-.85-1.48-1.3.75zM11 13.5v-6c-1.11.35-2 1.34-2 2.5s.89 2.15 2 2.5zm1-9.5c-4.42 0-8 3.58-8 8 0 1.21.27 2.36.75 3.39l1.13-1.13A5.934 5.934 0 016 10c0-3.31 2.69-6 6-6s6 2.69 6 6c0 1.66-.67 3.16-1.76 4.24l1.13 1.13C18.37 14.36 19 12.71 19 11c0-4.42-3.58-8-8-8z"/>
-            </svg>
-            <svg className="w-5 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M2 17h20v2H2zm0-5h20v2H2zm0-5h20v2H2z"/>
-            </svg>
-            <svg className="w-6 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/>
+          <div className="flex items-center gap-1">
+            <div className="flex gap-1">
+              <div className="w-1 h-1 bg-white rounded-full"></div>
+              <div className="w-1 h-1 bg-white rounded-full"></div>
+              <div className="w-1 h-1 bg-white rounded-full"></div>
+              <div className="w-1 h-1 bg-white rounded-full opacity-60"></div>
+            </div>
+            <svg className="w-6 h-3 ml-1" fill="white" viewBox="0 0 24 12">
+              <rect x="1" y="2" width="18" height="8" rx="2" fill="none" stroke="white" strokeWidth="1"/>
+              <rect x="20" y="4" width="2" height="4" rx="1" fill="white"/>
             </svg>
           </div>
         </div>
 
         {/* Screen */}
-        <div className="bg-gray-100 rounded-2xl overflow-hidden" style={{ minHeight: '600px' }}>
+        <div className="bg-gray-100 rounded-2xl overflow-hidden">
           {/* Navigation */}
           <div className="bg-white px-4 py-3 flex justify-between items-center border-b">
-            <span className="text-blue-500">Edit</span>
-            <span className="font-semibold">Pass</span>
-            <span className="text-blue-500">Done</span>
+            <span className="text-blue-500 text-sm">Back</span>
+            <span className="font-semibold text-sm">{design.logoText}</span>
+            <span className="text-blue-500 text-sm">...</span>
           </div>
 
           {/* Pass Content */}
-          <div className="p-4">
-            <div 
-              className="rounded-xl shadow-lg overflow-hidden"
-              style={{ backgroundColor: design.backgroundColor }}
-            >
+          <div className="p-3 bg-gray-100">
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               {/* Cover Image */}
               {coverUrl && (
-                <div className="h-32 bg-cover bg-center" style={{ backgroundImage: `url(${coverUrl})` }} />
+                <div className="h-24 bg-cover bg-center relative" style={{ backgroundImage: `url(${coverUrl})` }}>
+                  <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                </div>
               )}
 
-              {/* Header */}
-              <div className="p-4 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  {logoUrl ? (
-                    <img src={logoUrl} alt="Logo" className="h-12" />
-                  ) : (
-                    <div className="text-lg font-bold">{design.logoText}</div>
-                  )}
-                </div>
-
-                {/* Fields */}
-                <div className="grid grid-cols-2 gap-4">
-                  {design.fields.map((field) => (
-                    <div key={field.id}>
-                      <div className="text-xs opacity-75 uppercase" style={{ color: design.labelColor }}>
-                        {field.label}
+              {/* Pass Header */}
+              <div className="px-4 py-3" style={{ backgroundColor: design.backgroundColor }}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Logo" className="h-8 mb-2 brightness-0 invert" />
+                    ) : (
+                      <div className="text-white font-bold text-lg mb-1">{design.logoText}</div>
+                    )}
+                    <div className="text-white text-sm opacity-90">
+                      {design.topField.value.replace(/\{program_name\}/g, 'Huskers Rewards')}
+                    </div>
+                  </div>
+                  {design.fields.length > 0 && (
+                    <div className="text-right">
+                      <div className="text-white text-xs opacity-75 uppercase tracking-wide">
+                        {design.fields[0].label}
                       </div>
-                      <div className="font-semibold" style={{ color: design.valueColor }}>
-                        {field.value.replace(/\{[^}]+\}/g, (match) => {
+                      <div className="text-white font-semibold text-sm">
+                        {design.fields[0].value.replace(/\{[^}]+\}/g, (match) => {
                           const tagMap: Record<string, string> = {
                             '{full_name}': 'John Doe',
-                            '{fname}': 'John',
-                            '{lname}': 'Doe',
-                            '{email}': 'john@example.com',
-                            '{points}': '1,250',
-                            '{unused_points}': '750',
                             '{tier}': 'Gold',
-                            '{status}': 'Active',
-                            '{program_name}': 'Huskers Rewards',
-                            '{perk_id}': '246785'
+                            '{status}': 'Active'
                           }
                           return tagMap[match] || match
                         })}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
-              {/* Barcode */}
-              <div className="bg-white p-4">
-                <div className="flex flex-col items-center">
-                  <div className="w-32 h-32 bg-gray-200 rounded flex items-center justify-center">
-                    <QrCode className="w-20 h-20 text-gray-400" />
+              {/* Secondary Fields */}
+              {design.fields.length > 1 && (
+                <div className="px-4 py-3 bg-gray-50 border-b">
+                  <div className="grid grid-cols-2 gap-4">
+                    {design.fields.slice(1).map((field) => (
+                      <div key={field.id}>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          {field.label}
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {field.value.replace(/\{[^}]+\}/g, (match) => {
+                            const tagMap: Record<string, string> = {
+                              '{points}': '1,250',
+                              '{unused_points}': '750',
+                              '{email}': 'john@example.com'
+                            }
+                            return tagMap[match] || match
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-xs text-gray-600 mt-2">{design.barcode.caption}</p>
+                </div>
+              )}
+
+              {/* Barcode */}
+              <div className="px-4 py-6 bg-white text-center">
+                <div className="inline-block p-2 bg-white border border-gray-200 rounded">
+                  <QrCode className="w-16 h-16 text-gray-800" />
+                </div>
+                <div className="text-xs text-gray-600 mt-2 font-mono">
+                  {design.barcode.caption.replace(/\{perk_id\}/g, '246785')}
                 </div>
               </div>
             </div>
@@ -138,90 +157,102 @@ export function PassPreview({ device, design, className }: PassPreviewProps) {
     )
   }
 
-  // Android Preview
+  // Android Preview  
   return (
-    <div className={cn('bg-gray-800 rounded-2xl p-2 shadow-2xl', className)}>
+    <div className={cn('bg-gray-800 rounded-2xl p-2 shadow-2xl max-w-sm', className)}>
       {/* Status Bar */}
       <div className="bg-gray-900 text-white text-xs px-4 py-1 flex justify-between items-center rounded-t-xl">
-        <span>9:41 AM</span>
+        <span>9:41</span>
         <div className="flex items-center gap-1">
-          <span>📶</span>
-          <span>📶</span>
-          <span>🔋</span>
+          <div className="flex gap-1">
+            <div className="w-1 h-1 bg-white rounded-full"></div>
+            <div className="w-1 h-1 bg-white rounded-full"></div>
+            <div className="w-1 h-1 bg-white rounded-full"></div>
+          </div>
+          <div className="ml-2 text-xs">100%</div>
         </div>
       </div>
 
       {/* Screen */}
-      <div className="bg-white rounded-b-xl overflow-hidden" style={{ minHeight: '600px' }}>
+      <div className="bg-white rounded-b-xl overflow-hidden">
         {/* App Bar */}
-        <div className="bg-white px-4 py-3 flex items-center border-b">
-          <span className="text-xl">←</span>
-          <span className="ml-4 font-medium">Wallet Pass</span>
+        <div className="bg-white px-4 py-3 flex items-center shadow-sm">
+          <svg className="w-6 h-6 text-gray-700" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+          </svg>
+          <span className="ml-2 font-medium text-gray-900">{design.logoText}</span>
         </div>
 
         {/* Pass Content */}
-        <div className="p-4">
-          <div className="rounded-lg shadow-lg overflow-hidden bg-white border">
-            {/* Cover */}
+        <div className="p-4 bg-gray-50">
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            {/* Cover Image */}
             {coverUrl && (
-              <img src={coverUrl} alt="Cover" className="w-full h-24 object-cover" />
+              <div className="h-20 bg-cover bg-center" style={{ backgroundImage: `url(${coverUrl})` }} />
             )}
 
-            {/* Content */}
-            <div 
-              className="p-4"
-              style={{ backgroundColor: design.backgroundColor }}
-            >
-              <div className="flex items-center justify-between mb-4 text-white">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-10 brightness-0 invert" />
-                ) : (
-                  <div className="text-lg font-bold">{design.logoText}</div>
-                )}
-              </div>
-
-              {/* Fields as Chips */}
-              <div className="flex flex-wrap gap-2">
-                {design.fields.map((field) => (
-                  <div 
-                    key={field.id} 
-                    className="bg-white/20 px-3 py-1 rounded-full text-white text-sm"
-                  >
-                    <span className="opacity-75">{field.label}:</span>{' '}
-                    <span className="font-medium">
-                      {field.value.replace(/\{[^}]+\}/g, (match) => {
-                        const tagMap: Record<string, string> = {
-                          '{full_name}': 'John Doe',
-                          '{points}': '1,250',
-                          '{tier}': 'Gold',
-                          '{status}': 'Active'
-                        }
-                        return tagMap[match] || match
-                      })}
-                    </span>
+            {/* Pass Header */}
+            <div className="p-4" style={{ backgroundColor: design.backgroundColor }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="Logo" className="h-6 brightness-0 invert mb-1" />
+                  ) : (
+                    <div className="text-white font-bold text-base mb-1">{design.logoText}</div>
+                  )}
+                  <div className="text-white text-xs opacity-90">
+                    {design.topField.value.replace(/\{program_name\}/g, 'Huskers Rewards')}
                   </div>
-                ))}
+                </div>
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <div className="w-4 h-4 bg-white rounded-full opacity-80"></div>
+                </div>
               </div>
             </div>
 
-            {/* Barcode */}
-            <div className="bg-gray-50 p-4">
-              <div className="flex flex-col items-center">
-                <div className="w-40 h-40 bg-white border-2 border-gray-300 rounded flex items-center justify-center">
-                  <QrCode className="w-24 h-24 text-gray-400" />
+            {/* Material Design Cards */}
+            <div className="p-4 space-y-3">
+              {design.fields.map((field, index) => (
+                <div key={field.id} className="bg-gray-50 rounded-lg p-3 border-l-4 border-blue-500">
+                  <div className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">
+                    {field.label}
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {field.value.replace(/\{[^}]+\}/g, (match) => {
+                      const tagMap: Record<string, string> = {
+                        '{full_name}': 'John Doe',
+                        '{points}': '1,250',
+                        '{unused_points}': '750',
+                        '{tier}': 'Gold',
+                        '{status}': 'Active'
+                      }
+                      return tagMap[match] || match
+                    })}
+                  </div>
                 </div>
-                <p className="text-xs text-gray-600 mt-2">{design.barcode.caption}</p>
+              ))}
+            </div>
+
+            {/* Barcode Section */}
+            <div className="px-4 pb-4">
+              <div className="bg-gray-100 rounded-lg p-4 text-center">
+                <QrCode className="w-12 h-12 text-gray-600 mx-auto mb-2" />
+                <div className="text-xs text-gray-600 font-mono">
+                  {design.barcode.caption.replace(/\{perk_id\}/g, '246785')}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation Bar */}
-      <div className="bg-gray-900 px-4 py-2 flex justify-around rounded-b-xl">
-        <span className="text-white">◀</span>
-        <span className="text-white">●</span>
-        <span className="text-white">■</span>
+      {/* Navigation Pills */}
+      <div className="bg-gray-900 px-4 py-2 flex justify-center rounded-b-xl">
+        <div className="flex gap-2">
+          <div className="w-8 h-1 bg-white rounded-full"></div>
+          <div className="w-1 h-1 bg-white opacity-50 rounded-full self-center"></div>
+          <div className="w-1 h-1 bg-white opacity-50 rounded-full self-center"></div>
+        </div>
       </div>
     </div>
   )

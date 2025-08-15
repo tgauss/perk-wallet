@@ -29,6 +29,7 @@ import { UploadZone } from './components/upload-zone'
 import { FieldEditor } from './components/field-editor'
 import { ColorPicker } from './components/color-picker'
 import { PassPreview } from './components/pass-preview'
+import { BackPassEditor } from './components/back-pass-editor'
 
 interface TemplateDesignerProps {
   programId: string
@@ -61,7 +62,56 @@ export function TemplateDesigner({ programId, draftId }: TemplateDesignerProps) 
       type: 'QR Code',
       data: '{perk_id}',
       caption: '{perk_id}'
-    }
+    },
+    backItems: [
+      {
+        id: '1',
+        type: 'link' as const,
+        title: 'Black Friday Deals',
+        content: 'https://shop.raregoods.com/products/nebraska-holiday-ornaments...',
+        clicks: 22
+      },
+      {
+        id: '2', 
+        type: 'link' as const,
+        title: 'Sign In to Huskers Rewards',
+        content: 'https://rewards.huskers.com/signin',
+        clicks: 1394
+      },
+      {
+        id: '3',
+        type: 'text' as const,
+        content: `Welcome to Huskers Rewards! 🏆
+
+Get ready to supercharge your Husker spirit and score amazing rewards!
+
+Earn Kernels for:
+🎥 Watching Husker videos
+📱 Sharing on social media
+❓ Completing quizzes
+📸 Uploading photos
+🛍️ Making purchases
+👥 Referring friends
+
+Redeem for:
+🏆 Exclusive merch
+🎟️ VIP experiences
+🎮 Game tickets
+💰 Campus discounts
+🎁 And more!
+
+Tap the link above to sign in and start earning! The more you engage, the more you earn. 🚀
+
+Go Big Red! 🌽❤️`
+      },
+      {
+        id: '4',
+        type: 'link' as const,
+        title: 'Questions?',
+        content: 'https://rewards.huskers.com/faqs',
+        clicks: 71
+      }
+    ]
   })
 
   const handleFileUpload = useCallback((field: 'logo' | 'icon' | 'coverImage', file: File) => {
@@ -318,35 +368,11 @@ export function TemplateDesigner({ programId, draftId }: TemplateDesignerProps) 
             </div>
           </TabsContent>
 
-          <TabsContent value="back" className="mt-0 space-y-6">
-            {/* Back Fields Section */}
-            <div>
-              <h2 className="text-lg font-semibold mb-1">Back Fields</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Add additional information displayed on the back of the pass
-              </p>
-
-              <div className="space-y-4">
-                <FieldEditor
-                  label="Terms & Conditions"
-                  value=""
-                  onChange={() => {}}
-                  placeholder="Enter terms or link"
-                />
-                <FieldEditor
-                  label="Customer Service"
-                  value="support@example.com"
-                  onChange={() => {}}
-                  placeholder="Email or phone number"
-                />
-                <FieldEditor
-                  label="Website"
-                  value="https://example.com"
-                  onChange={() => {}}
-                  placeholder="Your website URL"
-                />
-              </div>
-            </div>
+          <TabsContent value="back" className="mt-0">
+            <BackPassEditor
+              items={design.backItems}
+              onChange={(backItems) => setDesign(prev => ({ ...prev, backItems }))}
+            />
           </TabsContent>
 
           <TabsContent value="features" className="mt-0 space-y-6">
