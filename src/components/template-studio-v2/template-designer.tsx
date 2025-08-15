@@ -113,8 +113,8 @@ export function TemplateDesigner({ programId, draftId }: TemplateDesignerProps) 
     <div className="flex h-screen bg-gray-50">
       {/* Left Panel - Form */}
       <div className="flex-1 bg-white border-r overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b z-10">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="sticky top-0 bg-white border-b z-10">
             <TabsList className="w-full justify-start rounded-none h-12 bg-gray-100">
               <TabsTrigger value="front" className="data-[state=active]:bg-white">
                 Front of Pass
@@ -126,10 +126,9 @@ export function TemplateDesigner({ programId, draftId }: TemplateDesignerProps) 
                 Features
               </TabsTrigger>
             </TabsList>
-          </Tabs>
-        </div>
+          </div>
 
-        <div className="p-6">
+          <div className="p-6">
           <TabsContent value="front" className="mt-0 space-y-6">
             {/* Design Section */}
             <div>
@@ -392,7 +391,8 @@ export function TemplateDesigner({ programId, draftId }: TemplateDesignerProps) 
               </div>
             </div>
           </TabsContent>
-        </div>
+          </div>
+        </Tabs>
       </div>
 
       {/* Right Panel - Preview */}
