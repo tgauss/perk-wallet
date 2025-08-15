@@ -5,6 +5,7 @@ import { PerkWebhookPayloadSchema, PerkWebhookPayload } from '@/lib/perk-webhook
 import { toSnapshot, ParticipantSnapshot } from '@/lib/perk/normalize';
 import { PerkClient } from '@/lib/perk-client';
 import { queueNotificationEvent } from '@/lib/notify';
+import { getProgramByPerkId } from '@/lib/programs';
 
 
 function generateIdempotencyKey(rawBody: string): string {
@@ -14,15 +15,11 @@ function generateIdempotencyKey(rawBody: string): string {
 async function resolveProgram(programId: string) {
   console.log('Looking for program with perk_program_id:', Number(programId));
   
-  const { data: program, error } = await supabase
-    .from('programs')
-    .select('*')
-    .eq('perk_program_id', Number(programId))
-    .single();
+  const program = await getProgramByPerkId(Number(programId));
 
-  console.log('Program lookup result:', { program, error });
+  console.log('Program lookup result:', { program });
 
-  if (error || !program) {
+  if (!program) {
     throw new Error(`Program not found for perk_program_id: ${programId}`);
   }
 

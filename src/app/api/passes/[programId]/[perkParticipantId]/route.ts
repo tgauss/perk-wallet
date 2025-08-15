@@ -5,6 +5,7 @@ import { ApplePassBuilder } from '@/lib/apple-pass';
 import { GoogleWalletBuilder } from '@/lib/google-wallet';
 import { PerkClient } from '@/lib/perk-client';
 import { createHash } from 'crypto';
+import { getProgramByPerkId } from '@/lib/programs';
 
 const UpdatePassRequestSchema = z.object({
   points: z.number().optional(),
@@ -30,11 +31,7 @@ export async function PATCH(
     const updates = UpdatePassRequestSchema.parse(body);
 
     // First get the program to resolve the internal UUID
-    const { data: program } = await supabase
-      .from('programs')
-      .select('*')
-      .eq('perk_program_id', perkProgramId)
-      .single();
+    const program = await getProgramByPerkId(perkProgramId);
 
     if (!program) {
       return NextResponse.json(

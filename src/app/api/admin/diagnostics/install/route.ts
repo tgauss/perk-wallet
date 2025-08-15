@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { buildQr } from '@/lib/qr'
 import { PASS_KINDS, PassKind } from '@/lib/program-settings'
 import { checkAppleConfig, checkGoogleConfig } from '@/lib/config.server'
+import { getProgramByPerkId } from '@/lib/programs'
 
 const DiagnosticsRequestSchema = z.object({
   perk_program_id: z.number(),
@@ -36,11 +37,7 @@ export async function POST(request: NextRequest) {
     } = DiagnosticsRequestSchema.parse(body)
     
     // Resolve program
-    const { data: program } = await supabase
-      .from('programs')
-      .select('id, name, settings')
-      .eq('perk_program_id', perk_program_id)
-      .single()
+    const program = await getProgramByPerkId(perk_program_id)
     
     if (!program) {
       return NextResponse.json({
@@ -55,10 +52,10 @@ export async function POST(request: NextRequest) {
     // Check if participant exists
     const { data: participant } = await supabase
       .from('participants')
-      .select('id')
+      .select('perk_participant_id')
       .eq('program_id', program.id)
       .eq('perk_participant_id', perk_participant_id)
-      .single()
+      .maybeSingle()
     
     const participantExists = !!participant
     

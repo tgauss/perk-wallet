@@ -55,7 +55,6 @@ export async function getSampleParticipant(
 
     if (!error && data) {
       return {
-        perk_participant_id: `perk-${data.perk_participant_id}`, // Keep for backward compat
         perk_participant_id: data.perk_participant_id,
         email: data.email,
         fname: data.fname,
@@ -73,7 +72,6 @@ export async function getSampleParticipant(
 
   // Fallback to mock data
   return {
-    perk_participant_id: 'sample-uuid-123',
     perk_participant_id: 246785,
     email: 'john.doe@example.com',
     fname: 'John',

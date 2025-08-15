@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readdir } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
+import { getProgramByPerkId } from '@/lib/programs'
 
 export type DoctorStatus = 'ok' | 'warn' | 'fail'
 
@@ -88,17 +89,13 @@ export async function GET(request: NextRequest) {
       return 'Connected successfully'
     }),
     safeCheck('Program Query', async () => {
-      if (!supabase || !programId) return 'Skipped (no program_id param)'
-      const { data, error } = await supabase
-        .from('programs')
-        .select('id')
-        .eq('perk_program_id', parseInt(programId))
-        .single()
+      if (!programId) return 'Skipped (no program_id param)'
       
-      if (error && error.code !== 'PGRST116') throw error
-      if (data) {
-        program_uuid = data.id
-        return `Found program UUID: ${data.id}`
+      const program = await getProgramByPerkId(parseInt(programId))
+      
+      if (program) {
+        program_uuid = program.id
+        return `Found program UUID: ${program.id}`
       }
       return 'Program not found'
     }),

@@ -2,23 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { InstallResult, InstallResponse, tryIssuePass } from '@/lib/install-types'
 import { PASS_KINDS } from '@/lib/program-settings'
+import { getProgramByPerkId } from '@/lib/programs'
 
 export async function GET(
   request: NextRequest,
   { params }: { 
-    params: { 
+    params: Promise<{ 
       programId: string
       perkParticipantId: string
       passKind: string
       resourceType: string
       resourceId: string
-    } 
+    }> 
   }
 ) {
   try {
-    const perkProgramId = parseInt(params.programId, 10)
-    const perkParticipantId = parseInt(params.perkParticipantId, 10)
-    const { passKind, resourceType, resourceId } = params
+    const resolvedParams = await params
+    const perkProgramId = parseInt(resolvedParams.programId, 10)
+    const perkParticipantId = parseInt(resolvedParams.perkParticipantId, 10)
+    const { passKind, resourceType, resourceId } = resolvedParams
     
     if (!perkProgramId || perkProgramId <= 0) {
       const response: InstallResponse = {
@@ -57,11 +59,7 @@ export async function GET(
     }
     
     // Resolve internal program UUID from perk_program_id
-    const { data: program } = await supabase
-      .from('programs')
-      .select('id, name')
-      .eq('perk_program_id', perkProgramId)
-      .single()
+    const program = await getProgramByPerkId(perkProgramId)
     
     if (!program) {
       const response: InstallResponse = {

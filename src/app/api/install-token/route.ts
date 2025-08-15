@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
+import { getProgramByPerkId } from '@/lib/programs';
 
 const InstallTokenRequestSchema = z.object({
   program_id: z.string(),
@@ -15,17 +16,13 @@ export async function POST(request: NextRequest) {
 
     console.log('Looking for program with perk_program_id:', Number(program_id));
     
-    const { data: program, error: programError } = await supabase
-      .from('programs')
-      .select('*')
-      .eq('perk_program_id', Number(program_id))
-      .single();
+    const program = await getProgramByPerkId(Number(program_id));
 
-    console.log('Program query result:', { program, error: programError });
+    console.log('Program query result:', { program });
 
     if (!program) {
       return NextResponse.json(
-        { error: 'Program not found', debug: { program_id, perk_program_id: Number(program_id), error: programError } },
+        { error: 'Program not found', debug: { program_id, perk_program_id: Number(program_id) } },
         { status: 404 }
       );
     }

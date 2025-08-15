@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { InstallResult, InstallResponse, tryIssuePass } from '@/lib/install-types'
 import { PASS_KINDS } from '@/lib/program-settings'
+import { getProgramByPerkId } from '@/lib/programs'
 
 export async function GET(
   request: NextRequest,
@@ -41,11 +42,7 @@ export async function GET(
     }
     
     // Resolve internal program UUID from perk_program_id
-    const { data: program } = await supabase
-      .from('programs')
-      .select('id, name')
-      .eq('perk_program_id', perkProgramId)
-      .single()
+    const program = await getProgramByPerkId(perkProgramId)
     
     if (!program) {
       const response: InstallResponse = {
