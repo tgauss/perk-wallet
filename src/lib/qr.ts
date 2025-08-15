@@ -64,17 +64,24 @@ export function parseQr(payload: string): QrScope | null {
   }
   
   // Parse optional pass kind
-  if (segments.length >= 3 && segments[2]) {
-    const passKind = segments[2]
-    if (!VALID_PASS_KINDS.includes(passKind as any)) {
+  if (segments.length >= 3) {
+    // If segment 3 exists but is empty, it's invalid
+    if (segments[2] === '') {
       return null
     }
-    result.passKind = passKind as QrScope['passKind']
     
-    // Parse optional resource type and ID (must have both)
-    if (segments.length >= 5 && segments[3] && segments[4]) {
-      result.resourceType = segments[3]
-      result.resourceId = segments[4]
+    if (segments[2]) {
+      const passKind = segments[2]
+      if (!VALID_PASS_KINDS.includes(passKind as any)) {
+        return null
+      }
+      result.passKind = passKind as QrScope['passKind']
+      
+      // Parse optional resource type and ID (must have both)
+      if (segments.length >= 5 && segments[3] && segments[4]) {
+        result.resourceType = segments[3]
+        result.resourceId = segments[4]
+      }
     }
   }
   
