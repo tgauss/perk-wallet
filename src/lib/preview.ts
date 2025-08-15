@@ -1,10 +1,12 @@
 // Preview resolver for template merge tags
 
 import { findMergeTags, isDynamicAttr, extractAttrKey } from './merge-tags'
+import { buildQr } from './qr'
 
 // Types for preview context
 export interface PreviewParticipant {
   perk_uuid: string
+  perk_participant_id: number
   email: string
   fname: string | null
   lname: string | null
@@ -17,6 +19,7 @@ export interface PreviewParticipant {
 
 export interface PreviewProgram {
   id: string
+  perk_program_id: number
   name: string
 }
 
@@ -30,7 +33,7 @@ export interface PreviewContext {
  */
 export async function getSampleParticipant(
   programId: string,
-  opts?: { perk_uuid?: string; email?: string }
+  opts?: { perk_participant_id?: number; email?: string }
 ): Promise<PreviewParticipant> {
   try {
     // Dynamic import to avoid build-time env issues
@@ -38,13 +41,13 @@ export async function getSampleParticipant(
     
     let query = supabase
       .from('participants')
-      .select('perk_uuid, email, fname, lname, points, unused_points, status, tier, profile_attributes')
+      .select('perk_participant_id, email, fname, lname, points, unused_points, status, tier, profile_attributes')
       .eq('program_id', programId)
       .limit(1)
 
     // Try to find specific participant if requested
-    if (opts?.perk_uuid) {
-      query = query.eq('perk_uuid', opts.perk_uuid)
+    if (opts?.perk_participant_id) {
+      query = query.eq('perk_participant_id', opts.perk_participant_id)
     } else if (opts?.email) {
       query = query.ilike('email', opts.email)
     }
@@ -53,7 +56,8 @@ export async function getSampleParticipant(
 
     if (!error && data) {
       return {
-        perk_uuid: data.perk_uuid,
+        perk_uuid: `perk-${data.perk_participant_id}`, // Keep for backward compat
+        perk_participant_id: data.perk_participant_id,
         email: data.email,
         fname: data.fname,
         lname: data.lname,
@@ -71,6 +75,7 @@ export async function getSampleParticipant(
   // Fallback to mock data
   return {
     perk_uuid: 'sample-uuid-123',
+    perk_participant_id: 246785,
     email: 'john.doe@example.com',
     fname: 'John',
     lname: 'Doe',
@@ -176,6 +181,25 @@ export function resolveMergeTags(input: string, ctx: PreviewContext): string {
  */
 function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Compose a preview QR code payload
+ */
+export function composePreviewQr(
+  programId: number,
+  perkId: number,
+  kind?: string,
+  rtype?: string,
+  rid?: string
+): string {
+  return buildQr({
+    programId,
+    perkParticipantId: perkId,
+    passKind: kind as any,
+    resourceType: rtype,
+    resourceId: rid
+  })
 }
 
 /**
