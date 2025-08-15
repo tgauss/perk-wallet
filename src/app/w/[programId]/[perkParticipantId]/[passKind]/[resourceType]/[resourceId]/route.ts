@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-
-const VALID_PASS_KINDS = ['loyalty', 'rewards', 'coupon', 'ticket', 'stamp', 'giftcard', 'id']
+import { InstallResult, InstallResponse, tryIssuePass } from '@/lib/install-types'
+import { PASS_KINDS } from '@/lib/program-settings'
 
 export async function GET(
   request: NextRequest,
@@ -20,12 +20,40 @@ export async function GET(
     const perkParticipantId = parseInt(params.perkParticipantId, 10)
     const { passKind, resourceType, resourceId } = params
     
-    if (!perkProgramId || !perkParticipantId) {
-      return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 })
+    if (!perkProgramId || perkProgramId <= 0) {
+      const response: InstallResponse = {
+        ok: false,
+        error: 'invalid_scope',
+        detail: 'Invalid program ID'
+      }
+      return NextResponse.json(response, { status: 400 })
     }
     
-    if (!VALID_PASS_KINDS.includes(passKind)) {
-      return NextResponse.json({ error: 'Invalid pass kind' }, { status: 400 })
+    if (!perkParticipantId || perkParticipantId <= 0) {
+      const response: InstallResponse = {
+        ok: false,
+        error: 'invalid_scope',
+        detail: 'Invalid participant ID'
+      }
+      return NextResponse.json(response, { status: 400 })
+    }
+    
+    if (!PASS_KINDS.includes(passKind as any)) {
+      const response: InstallResponse = {
+        ok: false,
+        error: 'invalid_scope',
+        detail: `Invalid pass kind: ${passKind}`
+      }
+      return NextResponse.json(response, { status: 400 })
+    }
+    
+    if (!resourceType || !resourceId) {
+      const response: InstallResponse = {
+        ok: false,
+        error: 'invalid_scope',
+        detail: 'Resource type and ID are required for this route'
+      }
+      return NextResponse.json(response, { status: 400 })
     }
     
     // Resolve internal program UUID from perk_program_id
@@ -36,48 +64,51 @@ export async function GET(
       .single()
     
     if (!program) {
-      return NextResponse.json({ error: 'Program not found' }, { status: 404 })
+      const response: InstallResponse = {
+        ok: false,
+        error: 'invalid_scope',
+        detail: 'Program not found'
+      }
+      return NextResponse.json(response, { status: 404 })
+    }
+    
+    // Check if participant exists
+    const { data: participant } = await supabase
+      .from('participants')
+      .select('id')
+      .eq('program_id', program.id)
+      .eq('perk_participant_id', perkParticipantId)
+      .single()
+    
+    if (!participant) {
+      const response: InstallResponse = {
+        ok: false,
+        error: 'participant_not_found',
+        detail: `Participant ${perkParticipantId} not found in program`
+      }
+      return NextResponse.json(response, { status: 404 })
     }
     
     // Issue or update the specific pass with resource targeting
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/passes/issue`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        program_id: program.id,
-        perk_participant_id: perkParticipantId,
-        pass_kind: passKind,
-        resource_type: resourceType,
-        resource_id: resourceId,
-      }),
+    const result = await tryIssuePass(program.id, perkParticipantId, passKind, {
+      resourceType,
+      resourceId
     })
     
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Failed to issue pass' },
-        { status: response.status }
-      )
-    }
-    
-    const result = await response.json()
-    
-    return NextResponse.json({ 
+    const response: InstallResponse = {
       ok: true,
       program: program.name,
-      passKind,
-      resource: {
-        type: resourceType,
-        id: resourceId
-      },
-      ...result
-    })
+      installed: [result]
+    }
+    
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Install error:', error)
-    return NextResponse.json(
-      { error: 'Failed to install pass' },
-      { status: 500 }
-    )
+    const response: InstallResponse = {
+      ok: false,
+      error: 'provider_error',
+      detail: error instanceof Error ? error.message : 'Internal server error'
+    }
+    return NextResponse.json(response, { status: 500 })
   }
 }
