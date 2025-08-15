@@ -3,7 +3,6 @@ import { PerkParticipantSchema, PerkWebhookParticipantSchema } from './schemas';
 // Normalized participant snapshot for consistent internal usage
 export type ParticipantSnapshot = {
   perk_participant_id: number;
-  perk_uuid: string;
   email: string | null;
   points: number;
   unused_points: number;
@@ -18,10 +17,9 @@ export type ParticipantSnapshot = {
 /**
  * Normalizes raw Perk participant data into a consistent snapshot
  * @param raw - Raw participant data from Perk API or webhook
- * @param perk_uuid - The participant's UUID in our system
  * @returns Normalized participant snapshot
  */
-export function toSnapshot(raw: unknown, perk_uuid: string): ParticipantSnapshot {
+export function toSnapshot(raw: unknown): ParticipantSnapshot {
   // Try full schema first, fall back to webhook schema
   let participant;
   try {
@@ -33,7 +31,6 @@ export function toSnapshot(raw: unknown, perk_uuid: string): ParticipantSnapshot
 
   return {
     perk_participant_id: participant.id,
-    perk_uuid,
     email: participant.email || null,
     points: participant.points || 0,
     unused_points: participant.unused_points || 0,
@@ -55,7 +52,6 @@ export function toSnapshot(raw: unknown, perk_uuid: string): ParticipantSnapshot
 export function fromDatabaseRow(row: any): ParticipantSnapshot {
   return {
     perk_participant_id: parseInt(row.perk_participant_id),
-    perk_uuid: row.perk_uuid,
     email: row.email,
     points: row.points || 0,
     unused_points: row.unused_points || 0,

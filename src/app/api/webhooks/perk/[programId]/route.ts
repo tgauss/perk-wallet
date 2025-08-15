@@ -78,13 +78,10 @@ async function upsertParticipant(
   }
 
   if (!participant) {
-    // Generate perk_uuid - using UUID format
-    const perkUuid = randomUUID();
-    
-    console.log(`Creating new participant with perk_uuid: ${perkUuid} for event: ${eventType}`);
+    console.log(`Creating new participant with perk_participant_id: ${perkParticipantId} for event: ${eventType}`);
 
     // Create participant snapshot
-    const snapshot = toSnapshot(perkParticipant, perkUuid);
+    const snapshot = toSnapshot(perkParticipant);
 
     // Create event tracking attributes
     const eventTracking = {
@@ -97,9 +94,8 @@ async function upsertParticipant(
     const { data: newParticipant, error: insertError } = await supabase
       .from('participants')
       .insert({
-        perk_uuid: perkUuid,
         program_id: program.id,
-        perk_participant_id: String(perkParticipantId), // Convert to string
+        perk_participant_id: perkParticipantId,
         email: snapshot.email || email,
         points: snapshot.points,
         unused_points: snapshot.unused_points,
@@ -122,11 +118,11 @@ async function upsertParticipant(
     participant = newParticipant;
   } else {
     // Create participant snapshot with latest data
-    const snapshot = toSnapshot(perkParticipant, participant.perk_uuid);
+    const snapshot = toSnapshot(perkParticipant);
     
     // Update existing participant with all fields from snapshot
     const updates: any = {
-      perk_participant_id: String(perkParticipantId),
+      perk_participant_id: perkParticipantId,
       email: snapshot.email || email,
       points: snapshot.points,
       unused_points: snapshot.unused_points,
@@ -170,7 +166,8 @@ async function upsertParticipant(
       const { data: updatedParticipant, error: updateError } = await supabase
         .from('participants')
         .update(updates)
-        .eq('perk_uuid', participant.perk_uuid)
+        .eq('program_id', program.id)
+        .eq('perk_participant_id', perkParticipantId)
         .select()
         .single();
 
@@ -185,7 +182,7 @@ async function upsertParticipant(
   }
 
   // Return normalized snapshot
-  return toSnapshot(perkParticipant, participant.perk_uuid);
+  return toSnapshot(perkParticipant);
 }
 
 async function recordWebhookEvent(
@@ -206,7 +203,7 @@ async function recordWebhookEvent(
       event_id: idemKey,
       participant_id: participant.perk_participant_id,
       participant_email: participant.email,
-      participant_uuid: participant.perk_uuid,
+      participant_id: participant.perk_participant_id,
       event_data: rawBody,
     });
 
@@ -260,7 +257,7 @@ export async function POST(
         body.data.participant, // Pass the full participant data for points updates
         body.event // Pass the event type for tracking
       );
-      console.log('Upserted participant:', participant.perk_uuid);
+      console.log('Upserted participant:', participant.perk_participant_id);
 
       // Queue notification for points_updated events
       if (body.event === 'participant_points_updated') {
@@ -271,7 +268,8 @@ export async function POST(
           const { data: prevParticipant } = await supabase
             .from('participants')
             .select('points, unused_points')
-            .eq('perk_uuid', participant.perk_uuid)
+            .eq('program_id', program.id)
+        .eq('perk_participant_id', perkParticipantId)
             .single();
           
           const prevPoints = prevParticipant?.[pointsDisplay === 'points' ? 'points' : 'unused_points'] || 0;
@@ -280,7 +278,7 @@ export async function POST(
           await queueNotificationEvent({
             id: randomUUID(),
             program_id: program.id,
-            participant_uuid: participant.perk_uuid,
+            participant_id: participant.perk_participant_id,
             rule: 'points_updated',
             data: {
               ...(pointsDisplay === 'points' 
@@ -328,12 +326,12 @@ export async function POST(
         // This ensures webhook still returns success to Perk
       }
 
-      console.log(`✅ Successfully processed ${body.event} for participant ${participant.perk_uuid}`);
+      console.log(`✅ Successfully processed ${body.event} for participant ${participant.perk_participant_id}`);
 
       return NextResponse.json(
         { 
           message: 'Webhook processed successfully',
-          participant_uuid: participant.perk_uuid,
+          participant_id: participant.perk_participant_id,
           job_type: body.event,
         },
         { status: 202 }

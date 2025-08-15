@@ -6,11 +6,12 @@ import { getDefaultInstallGroup } from '@/lib/program-settings'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { programId: string; perkParticipantId: string } }
+  { params }: { params: Promise<{ programId: string; perkParticipantId: string }> }
 ) {
   try {
-    const perkProgramId = parseInt(params.programId, 10)
-    const perkParticipantId = parseInt(params.perkParticipantId, 10)
+    const resolvedParams = await params
+    const perkProgramId = parseInt(resolvedParams.programId, 10)
+    const perkParticipantId = parseInt(resolvedParams.perkParticipantId, 10)
     
     if (!perkProgramId || perkProgramId <= 0) {
       const response: InstallResponse = {
@@ -49,10 +50,10 @@ export async function GET(
     // Check if participant exists
     const { data: participant } = await supabase
       .from('participants')
-      .select('id')
+      .select('perk_participant_id')
       .eq('program_id', program.id)
       .eq('perk_participant_id', perkParticipantId)
-      .single()
+      .maybeSingle()
     
     if (!participant) {
       const response: InstallResponse = {

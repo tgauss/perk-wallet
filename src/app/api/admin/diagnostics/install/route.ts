@@ -81,10 +81,9 @@ export async function POST(request: NextRequest) {
       // Check for published template
       const { data: template } = await supabase
         .from('templates')
-        .select('id, apple_template, google_template')
+        .select('id, layout')
         .eq('program_id', program.id)
         .eq('pass_kind', kind)
-        .eq('is_active', true)
         .single()
       
       const hasTemplate = !!template
@@ -92,21 +91,24 @@ export async function POST(request: NextRequest) {
         issues.push(`No published template for ${kind}`)
       }
       
-      // Check template assets (simplified - just check if templates have basic structure)
+      // Check template assets (simplified - just check if layout has basic structure)
       let assetsOk = false
       if (template) {
-        // For Apple, check if template has minimal required fields
-        const appleTemplate = template.apple_template as any
-        const googleTemplate = template.google_template as any
-        
+        const layout = template.layout as any
         assetsOk = true
-        if (appleTemplate && !appleTemplate.formatVersion) {
+        
+        // Basic validation - check if layout has required structure
+        if (!layout || typeof layout !== 'object') {
           assetsOk = false
-          issues.push('Apple template missing formatVersion')
-        }
-        if (googleTemplate && !googleTemplate.classId) {
-          assetsOk = false
-          issues.push('Google template missing classId')
+          issues.push('Template layout missing or invalid')
+        } else {
+          // Check for Apple/Google specific configs in layout
+          if (layout.apple && !layout.apple.formatVersion) {
+            issues.push('Apple template missing formatVersion')
+          }
+          if (layout.google && !layout.google.classId) {
+            issues.push('Google template missing classId')
+          }
         }
       }
       
