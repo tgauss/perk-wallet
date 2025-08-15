@@ -1,6 +1,7 @@
 import { PKPass } from 'passkit-generator';
 import { randomBytes } from 'crypto';
-import { config } from './config';
+import { getServerEnv } from './config.server';
+import { getAppUrl } from './config.public';
 import { qrSigner } from './qr-code';
 import { ParticipantSnapshot } from './perk/normalize';
 
@@ -22,10 +23,11 @@ export class ApplePassBuilder {
   private authTokenSecret: string;
 
   constructor() {
-    this.teamIdentifier = config.APPLE_TEAM_IDENTIFIER;
-    this.passTypeIdentifier = config.APPLE_PASS_TYPE_IDENTIFIER;
-    this.webServiceURL = config.APPLE_WEB_SERVICE_URL;
-    this.authTokenSecret = config.APPLE_AUTH_TOKEN_SECRET;
+    const serverEnv = getServerEnv();
+    this.teamIdentifier = serverEnv.APPLE_TEAM_IDENTIFIER || '';
+    this.passTypeIdentifier = serverEnv.APPLE_PASS_TYPE_IDENTIFIER || '';
+    this.webServiceURL = serverEnv.APPLE_WEB_SERVICE_URL || '';
+    this.authTokenSecret = serverEnv.APPLE_AUTH_TOKEN_SECRET || '';
   }
 
   private generateSerialNumber(): string {

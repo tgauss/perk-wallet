@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { buildQr } from '@/lib/qr'
 import { PASS_KINDS, PassKind } from '@/lib/program-settings'
+import { checkAppleConfig, checkGoogleConfig } from '@/lib/config.server'
 
 const DiagnosticsRequestSchema = z.object({
   perk_program_id: z.number(),
@@ -22,75 +23,6 @@ type DiagnosticCheck = {
   assets_ok: boolean
   qr_preview: string
   issues: string[]
-}
-
-// Check if Apple configuration is present and valid
-function checkAppleConfig(): { ready: boolean; issues: string[] } {
-  const issues: string[] = []
-  
-  const requiredEnvVars = [
-    'APPLE_PASS_TYPE_IDENTIFIER',
-    'APPLE_TEAM_IDENTIFIER',
-    'APPLE_WEB_SERVICE_URL',
-    'APPLE_AUTH_TOKEN_SECRET',
-    'APPLE_PASS_CERT_P12_BASE64',
-    'APPLE_PASS_CERT_PASSWORD'
-  ]
-  
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
-      issues.push(`Missing ${envVar}`)
-    }
-  }
-  
-  // Try to decode the certificate
-  if (process.env.APPLE_PASS_CERT_P12_BASE64) {
-    try {
-      const certBuffer = Buffer.from(process.env.APPLE_PASS_CERT_P12_BASE64, 'base64')
-      if (certBuffer.length < 100) {
-        issues.push('Apple certificate appears invalid (too small)')
-      }
-    } catch (e) {
-      issues.push('Apple certificate cannot be decoded from base64')
-    }
-  }
-  
-  return {
-    ready: issues.length === 0,
-    issues
-  }
-}
-
-// Check if Google Wallet configuration is present and valid
-function checkGoogleConfig(): { ready: boolean; issues: string[] } {
-  const issues: string[] = []
-  
-  if (!process.env.GOOGLE_WALLET_SA_JSON_BASE64) {
-    issues.push('Missing GOOGLE_WALLET_SA_JSON_BASE64')
-  } else {
-    try {
-      const saBuffer = Buffer.from(process.env.GOOGLE_WALLET_SA_JSON_BASE64, 'base64')
-      const saJson = JSON.parse(saBuffer.toString())
-      
-      if (!saJson.private_key) {
-        issues.push('Google service account missing private_key')
-      }
-      if (!saJson.client_email) {
-        issues.push('Google service account missing client_email')
-      }
-    } catch (e) {
-      issues.push('Google service account JSON cannot be decoded')
-    }
-  }
-  
-  if (!process.env.GOOGLE_WALLET_ISSUER_ID) {
-    issues.push('Missing GOOGLE_WALLET_ISSUER_ID')
-  }
-  
-  return {
-    ready: issues.length === 0,
-    issues
-  }
 }
 
 export async function POST(request: NextRequest) {

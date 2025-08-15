@@ -8,6 +8,8 @@ import { createHash, randomBytes } from 'crypto';
 import { fromDatabaseRow } from '@/lib/perk/normalize';
 import { PKPass } from 'passkit-generator';
 import { buildQr } from '@/lib/qr';
+import { getServerEnv } from '@/lib/config.server';
+import { getAppUrl } from '@/lib/config.public';
 
 const IssuePassRequestSchema = z.object({
   perk_participant_id: z.number(),
@@ -28,6 +30,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { perk_participant_id, program_id, pass_kind = 'loyalty', resource_type, resource_id, download = false } = IssuePassRequestSchema.parse(body);
+    
+    // Get server environment
+    const serverEnv = getServerEnv();
 
     // Handle both numeric program_id and UUID program_id
     let program;
@@ -118,7 +123,7 @@ export async function POST(request: NextRequest) {
 
       // Generate serial number and get auth token
       const serialNumber = randomBytes(16).toString('hex').toUpperCase();
-      const authToken = process.env.APPLE_AUTH_TOKEN_SECRET!;
+      const authToken = serverEnv.APPLE_AUTH_TOKEN_SECRET || '';
       
       // Generate QR code data using new format
       const qrData = buildQr({
@@ -132,12 +137,12 @@ export async function POST(request: NextRequest) {
       // Build basePass with style based on pass_kind
       let basePass: any = {
         formatVersion: 1,
-        passTypeIdentifier: process.env.APPLE_PASS_TYPE_IDENTIFIER!,
+        passTypeIdentifier: serverEnv.APPLE_PASS_TYPE_IDENTIFIER || '',
         serialNumber: serialNumber,
-        teamIdentifier: process.env.APPLE_TEAM_IDENTIFIER!,
+        teamIdentifier: serverEnv.APPLE_TEAM_IDENTIFIER || '',
         organizationName: program.name || 'Perk Wallet',
         description: pass_kind === 'loyalty' ? 'Loyalty Card' : 'Rewards Card',
-        webServiceURL: process.env.APPLE_WEB_SERVICE_URL!,
+        webServiceURL: serverEnv.APPLE_WEB_SERVICE_URL || '',
         authenticationToken: authToken,
         groupingIdentifier: String(program.perk_program_id),
         backgroundColor: 'rgb(60, 65, 76)',
@@ -204,9 +209,9 @@ export async function POST(request: NextRequest) {
       
       const pass = new PKPass(buffers, {
         wwdr: '', // Skip WWDR for now
-        signerCert: process.env.APPLE_PASS_CERT_P12_BASE64!,
-        signerKey: process.env.APPLE_PASS_CERT_P12_BASE64!,
-        signerKeyPassphrase: process.env.APPLE_PASS_CERT_PASSWORD!
+        signerCert: serverEnv.APPLE_PASS_CERT_P12_BASE64 || '',
+        signerKey: serverEnv.APPLE_PASS_CERT_P12_BASE64 || '',
+        signerKeyPassphrase: serverEnv.APPLE_PASS_CERT_PASSWORD || ''
       }, {}); // No overrides needed
       
       const passBuffer = await pass.getAsBuffer();
@@ -395,7 +400,7 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    const installUrl = `${process.env.NEXT_PUBLIC_APP_URL}/w/${program.perk_program_id}/${perk_participant_id}`;
+    const installUrl = `${getAppUrl()}/w/${program.perk_program_id}/${perk_participant_id}`;
 
     const perkClient = new PerkClient(program.api_key);
     await perkClient.updateParticipantProfileAttributes(participant.perk_participant_id, {

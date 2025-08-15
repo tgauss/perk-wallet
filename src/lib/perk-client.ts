@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { config } from './config';
+import { getServerEnv } from './config.server';
 
 const ParticipantSchema = z.object({
   id: z.string(),
@@ -40,8 +40,9 @@ export class PerkClient {
   private maxRetryDelay = 60000;
 
   constructor(apiKey?: string, baseUrl?: string) {
-    this.apiKey = apiKey || config.PERK_API_KEY;
-    this.baseUrl = baseUrl || config.PERK_API_URL;
+    const serverEnv = getServerEnv();
+    this.apiKey = apiKey || serverEnv.PERK_API_KEY || '';
+    this.baseUrl = baseUrl || serverEnv.PERK_BASE_URL || serverEnv.PERK_API_URL || 'https://perk.studio';
   }
 
   private async sleep(ms: number): Promise<void> {

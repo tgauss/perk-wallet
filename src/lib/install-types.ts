@@ -1,3 +1,5 @@
+import { getAppUrl } from './config.public'
+
 export type InstallResult = {
   passKind: string
   status: 'installed' | 'updated' | 'skipped' | 'failed'
@@ -19,7 +21,7 @@ export async function tryIssuePass(
   }
 ): Promise<InstallResult> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/passes/issue`, {
+    const response = await fetch(`${getAppUrl()}/api/passes/issue`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto';
-import { config } from './config';
+import { getServerEnv } from './config.server';
 
 const QR_TTL_SECONDS = 180;
 
@@ -17,7 +17,8 @@ export class QRCodeSigner {
   private secret: string;
 
   constructor(secret?: string) {
-    this.secret = secret || config.QR_SIGNING_SECRET;
+    const serverEnv = getServerEnv();
+    this.secret = secret || serverEnv.QR_SIGNING_SECRET || 'default-secret';
   }
 
   private generateNonce(length: number = 16): string {

@@ -1,7 +1,8 @@
 import { SignJWT } from 'jose';
 import { GoogleAuth } from 'google-auth-library';
 import { randomBytes } from 'crypto';
-import { config } from './config';
+import { getServerEnv } from './config.server';
+import { getAppUrl } from './config.public';
 import { qrSigner } from './qr-code';
 import { ParticipantSnapshot } from './perk/normalize';
 
@@ -22,12 +23,13 @@ export class GoogleWalletBuilder {
   private auth: GoogleAuth;
 
   constructor() {
-    this.issuerId = config.GOOGLE_WALLET_ISSUER_ID;
-    this.serviceAccountEmail = config.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL;
+    const serverEnv = getServerEnv();
+    this.issuerId = serverEnv.GOOGLE_WALLET_ISSUER_ID || '';
+    this.serviceAccountEmail = serverEnv.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || '';
     
     try {
       // Try to parse as direct JSON first, then as base64 encoded JSON
-      let keyString = config.GOOGLE_WALLET_SERVICE_ACCOUNT_KEY;
+      let keyString = serverEnv.GOOGLE_WALLET_SERVICE_ACCOUNT_KEY || '';
       
       // If it looks like base64, decode it first
       if (!keyString.startsWith('{') && keyString.length > 100) {
@@ -76,8 +78,8 @@ export class GoogleWalletBuilder {
       },
       multipleDevicesAndHoldersAllowedStatus: 'MULTIPLE_HOLDERS',
       callbackOptions: {
-        url: `${config.NEXT_PUBLIC_APP_URL}/api/google/callback`,
-        updateRequestUrl: `${config.NEXT_PUBLIC_APP_URL}/api/google/update`,
+        url: `${getAppUrl()}/api/google/callback`,
+        updateRequestUrl: `${getAppUrl()}/api/google/update`,
       },
     };
   }
@@ -94,7 +96,7 @@ export class GoogleWalletBuilder {
       hexBackgroundColor: '#3C414C',
       multipleDevicesAndHoldersAllowedStatus: 'MULTIPLE_HOLDERS',
       callbackOptions: {
-        url: `${config.NEXT_PUBLIC_APP_URL}/api/google/callback`,
+        url: `${getAppUrl()}/api/google/callback`,
       },
     };
   }

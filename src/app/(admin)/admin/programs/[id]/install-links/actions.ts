@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { getProgramById } from '@/lib/programs'
 import { PassKind } from '@/lib/program-settings'
+import { getAppUrl } from '@/lib/config.public'
 
 // Types
 export type InstallLinkResult = 
@@ -34,7 +35,7 @@ export async function upsertInstallLink(
     }
 
     // Build canonical URL based on options
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pass.perk.ooo'
+    const appUrl = getAppUrl()
     let url = `${appUrl}/w/${program.perk_program_id}/${perkParticipantId}`
     
     if (options?.passKind) {

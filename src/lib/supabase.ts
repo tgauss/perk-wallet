@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
-import { config } from './config';
+import { getServerEnv } from './config.server';
+import { publicEnv } from './config.public';
+
+// Get server env for service role key
+const serverEnv = getServerEnv();
 
 export const supabase = createClient(
-  config.NEXT_PUBLIC_SUPABASE_URL,
-  config.SUPABASE_SERVICE_ROLE_KEY,
+  publicEnv.NEXT_PUBLIC_SUPABASE_URL || '',
+  serverEnv.SUPABASE_SERVICE_ROLE_KEY || '',
   {
     auth: {
       autoRefreshToken: false,
