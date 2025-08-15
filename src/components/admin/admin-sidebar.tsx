@@ -13,7 +13,8 @@ import {
   Settings,
   Stethoscope,
   Palette,
-  Edit3
+  Edit3,
+  Link as LinkIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { type EmulatedIdentity } from '@/lib/auth-emulator'
@@ -62,6 +63,7 @@ export function AdminSidebar({ identity }: AdminSidebarProps) {
   const programNavigation = isOnProgramPage ? [
     { name: 'Templates', href: `/admin/programs/${programId}/templates`, icon: Edit3 },
     { name: 'Branding', href: `/admin/programs/${programId}/branding`, icon: Palette },
+    { name: 'Install Links', href: `/admin/programs/${programId}/install-links`, icon: LinkIcon },
   ] : []
 
   return (

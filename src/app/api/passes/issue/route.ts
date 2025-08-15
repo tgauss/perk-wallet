@@ -7,12 +7,14 @@ import { PerkClient } from '@/lib/perk-client';
 import { createHash, randomBytes } from 'crypto';
 import { fromDatabaseRow } from '@/lib/perk/normalize';
 import { PKPass } from 'passkit-generator';
-import { qrSigner } from '@/lib/qr-code';
+import { buildQr } from '@/lib/qr';
 
 const IssuePassRequestSchema = z.object({
-  perk_uuid: z.string(),
+  perk_participant_id: z.number(),
   program_id: z.union([z.string(), z.number()]),
-  pass_kind: z.enum(['loyalty', 'rewards']).optional(),
+  pass_kind: z.enum(['loyalty', 'rewards', 'coupon', 'ticket', 'stamp', 'giftcard', 'id']).optional(),
+  resource_type: z.string().optional(),
+  resource_id: z.string().optional(),
   download: z.boolean().optional(), // If true, return the .pkpass file directly
 });
 
@@ -25,7 +27,7 @@ function generateDataHash(data: any): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { perk_uuid, program_id, pass_kind = 'loyalty', download = false } = IssuePassRequestSchema.parse(body);
+    const { perk_participant_id, program_id, pass_kind = 'loyalty', resource_type, resource_id, download = false } = IssuePassRequestSchema.parse(body);
 
     // Handle both numeric program_id and UUID program_id
     let program;
@@ -60,7 +62,8 @@ export async function POST(request: NextRequest) {
     const { data: participant } = await supabase
       .from('participants')
       .select('*')
-      .eq('perk_uuid', perk_uuid)
+      .eq('program_id', program.id)
+      .eq('perk_participant_id', perk_participant_id)
       .single();
 
     if (!participant) {
@@ -117,8 +120,14 @@ export async function POST(request: NextRequest) {
       const serialNumber = randomBytes(16).toString('hex').toUpperCase();
       const authToken = process.env.APPLE_AUTH_TOKEN_SECRET!;
       
-      // Generate QR code data
-      const qrData = qrSigner.generateQRData(perk_uuid);
+      // Generate QR code data using new format
+      const qrData = buildQr({
+        programId: program.perk_program_id,
+        perkParticipantId: perk_participant_id,
+        passKind: pass_kind as any,
+        resourceType: resource_type,
+        resourceId: resource_id
+      });
 
       // Build basePass with style based on pass_kind
       let basePass: any = {
@@ -212,19 +221,25 @@ export async function POST(request: NextRequest) {
       // Store or update the pass record
       const passData = {
         programId: program.perk_program_id,
-        perkUuid: perk_uuid,
+        perkParticipantId: perk_participant_id,
         participant: participantSnapshot,
-        passType: pass_kind as 'loyalty' | 'rewards',
+        passType: pass_kind,
         template: template.apple_template || {},
         pointsDisplay,
+        resourceType: resource_type,
+        resourceId: resource_id,
       };
       
       await supabase
         .from('passes')
         .upsert({
-          perk_uuid: perk_uuid,
+          perk_participant_id: perk_participant_id,
           program_id: program.id,
           pass_kind: pass_kind,
+          resource_type: resource_type || null,
+          resource_id: resource_id || null,
+          qr_payload: qrData,
+          qr_payload_version: 1,
           apple_serial_number: serialNumber,
           apple_auth_token: authToken,
           apple_device_tokens: [],
@@ -233,7 +248,7 @@ export async function POST(request: NextRequest) {
           pass_data: passData,
           version: 1,
         }, {
-          onConflict: 'perk_uuid,program_id,pass_kind'
+          onConflict: 'program_id,perk_participant_id,pass_kind'
         });
 
       // Return the .pkpass file
@@ -241,7 +256,7 @@ export async function POST(request: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': 'application/vnd.apple.pkpass',
-          'Content-Disposition': `attachment; filename="${pass_kind}-${perk_uuid}.pkpass"`,
+          'Content-Disposition': `attachment; filename="${pass_kind}-${perk_participant_id}.pkpass"`,
           'Content-Length': passBuffer.length.toString()
         }
       });
@@ -251,7 +266,7 @@ export async function POST(request: NextRequest) {
     const { data: existingPasses } = await supabase
       .from('passes')
       .select('*')
-      .eq('perk_uuid', perk_uuid)
+      .eq('perk_participant_id', perk_participant_id)
       .eq('program_id', program.id);
 
     if (existingPasses && existingPasses.length > 0) {
@@ -284,7 +299,7 @@ export async function POST(request: NextRequest) {
 
     const loyaltyPassData = {
       programId: program.perk_program_id,
-      perkUuid: perk_uuid,
+      perkParticipantId: perk_participant_id,
       participant: participantSnapshot,
       passType: 'loyalty' as const,
       template: loyaltyTemplate?.apple_template || {},
@@ -293,7 +308,7 @@ export async function POST(request: NextRequest) {
 
     const rewardsPassData = {
       programId: program.perk_program_id,
-      perkUuid: perk_uuid,
+      perkParticipantId: perk_participant_id,
       participant: participantSnapshot,
       passType: 'rewards' as const,
       template: rewardsTemplate?.apple_template || {},
@@ -308,7 +323,7 @@ export async function POST(request: NextRequest) {
 
     const googleWalletLoyaltyData = {
       programId: program.perk_program_id,
-      perkUuid: perk_uuid,
+      perkParticipantId: perk_participant_id,
       participant: participantSnapshot,
       passType: 'loyalty' as const,
       template: loyaltyTemplate?.google_template || {},
@@ -317,7 +332,7 @@ export async function POST(request: NextRequest) {
 
     const googleWalletRewardsData = {
       programId: program.perk_program_id,
-      perkUuid: perk_uuid,
+      perkParticipantId: perk_participant_id,
       participant: participantSnapshot,
       passType: 'rewards' as const,
       template: rewardsTemplate?.google_template || {},
@@ -330,12 +345,20 @@ export async function POST(request: NextRequest) {
     const loyaltyDataHash = generateDataHash(loyaltyPassData);
     const rewardsDataHash = generateDataHash(rewardsPassData);
 
+    const loyaltyQr = buildQr({
+      programId: program.perk_program_id,
+      perkParticipantId: perk_participant_id,
+      passKind: 'loyalty'
+    });
+
     const { data: loyaltyPass } = await supabase
       .from('passes')
       .insert({
-        perk_uuid: perk_uuid,
+        perk_participant_id: perk_participant_id,
         program_id: program.id,
         pass_kind: 'loyalty',
+        qr_payload: loyaltyQr,
+        qr_payload_version: 1,
         apple_serial_number: loyaltySerial,
         apple_auth_token: loyaltyAuth,
         google_object_id: loyaltyObjectId,
@@ -347,12 +370,20 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
+    const rewardsQr = buildQr({
+      programId: program.perk_program_id,
+      perkParticipantId: perk_participant_id,
+      passKind: 'rewards'
+    });
+
     const { data: rewardsPass } = await supabase
       .from('passes')
       .insert({
-        perk_uuid: perk_uuid,
+        perk_participant_id: perk_participant_id,
         program_id: program.id,
         pass_kind: 'rewards',
+        qr_payload: rewardsQr,
+        qr_payload_version: 1,
         apple_serial_number: rewardsSerial,
         apple_auth_token: rewardsAuth,
         google_object_id: rewardsObjectId,
@@ -364,7 +395,7 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    const installUrl = `${process.env.NEXT_PUBLIC_APP_URL}/w/${program.perk_program_id}/${perk_uuid}`;
+    const installUrl = `${process.env.NEXT_PUBLIC_APP_URL}/w/${program.perk_program_id}/${perk_participant_id}`;
 
     const perkClient = new PerkClient(program.api_key);
     await perkClient.updateParticipantProfileAttributes(participant.perk_participant_id, {
