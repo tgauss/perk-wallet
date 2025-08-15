@@ -186,7 +186,8 @@ GET /admin/p/{perkProgramId}
 GET /admin                    # Dashboard
 GET /admin/programs           # Program management
 GET /admin/templates          # Template editor
-GET /admin/participants       # Search participants
+GET /admin/participants       # Legacy redirect (moved to program context)
+GET /admin/programs/{programId}/participants/{perkParticipantId}  # Participant details
 GET /admin/passes             # Wallet pass monitoring
 GET /admin/jobs               # Background jobs
 GET /admin/webhooks           # Event history

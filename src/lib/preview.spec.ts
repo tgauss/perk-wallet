@@ -6,7 +6,7 @@ import { resolveMergeTags, resolveLayoutForPreview, type PreviewContext } from '
 // Mock context for testing
 const mockContext: PreviewContext = {
   participant: {
-    perk_uuid: 'test-uuid-123',
+    perk_participant_id: 123,
     email: 'john.doe@example.com',
     fname: 'John',
     lname: 'Doe',
@@ -42,7 +42,7 @@ describe('resolveMergeTags', () => {
   })
 
   it('resolves program tags', () => {
-    expect(resolveMergeTags('UUID: {perk_uuid}', mockContext)).toBe('UUID: test-uuid-123')
+    expect(resolveMergeTags('ID: {perk_participant_id}', mockContext)).toBe('ID: 123')
     expect(resolveMergeTags('Program: {program_name}', mockContext)).toBe('Program: VIP Rewards')
     expect(resolveMergeTags('ID: {program_id}', mockContext)).toBe('ID: test-program-id')
   })
@@ -210,7 +210,7 @@ describe('resolveLayoutForPreview', () => {
         },
         footer: {
           contact: 'Questions? Email {email}',
-          id: '{perk_uuid}'
+          id: '{perk_participant_id}'
         }
       }
     }

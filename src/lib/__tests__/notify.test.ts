@@ -43,8 +43,8 @@ describe('Notification System', () => {
   });
 
   const mockParticipant = {
-    perk_uuid: 'test-participant',
     program_id: 'program-123',
+    perk_participant_id: 12345,
     email: 'test@example.com',
     points: 250,
     unused_points: 125,
@@ -52,7 +52,6 @@ describe('Notification System', () => {
     tier: 'gold',
     fname: 'John',
     lname: 'Doe',
-    perk_participant_id: '12345',
     profile_attributes: {},
   };
 

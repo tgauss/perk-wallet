@@ -22,10 +22,8 @@ describe('Perk Participant Normalization', () => {
   };
 
   const sampleDbRow = {
-    id: 'uuid-123',
-    perk_uuid: 'test-perk-uuid',
     program_id: 'program-123',
-    perk_participant_id: '12345',
+    perk_participant_id: 12345,
     email: 'fan@bluejackets.com',
     points: 250,
     unused_points: 125,
@@ -44,11 +42,10 @@ describe('Perk Participant Normalization', () => {
 
   describe('toSnapshot', () => {
     it('should normalize full Perk participant data', () => {
-      const snapshot = toSnapshot(samplePerkParticipant, 'test-perk-uuid');
+      const snapshot = toSnapshot(samplePerkParticipant);
 
       expect(snapshot).toEqual({
         perk_participant_id: 12345,
-        perk_uuid: 'test-perk-uuid',
         email: 'fan@bluejackets.com',
         points: 250,
         unused_points: 125,
@@ -72,7 +69,7 @@ describe('Perk Participant Normalization', () => {
         status: 'premium',
       };
 
-      const snapshot = toSnapshot(participantWithoutTier, 'test-uuid');
+      const snapshot = toSnapshot(participantWithoutTier);
       expect(snapshot.tier).toBe('premium');
     });
 
@@ -82,11 +79,10 @@ describe('Perk Participant Normalization', () => {
         email: 'test@example.com',
       };
 
-      const snapshot = toSnapshot(minimalParticipant, 'test-uuid');
+      const snapshot = toSnapshot(minimalParticipant);
 
       expect(snapshot).toEqual({
         perk_participant_id: 12345,
-        perk_uuid: 'test-uuid',
         email: 'test@example.com',
         points: 0,
         unused_points: 0,
@@ -108,7 +104,7 @@ describe('Perk Participant Normalization', () => {
         status: 'active',
       };
 
-      const snapshot = toSnapshot(webhookParticipant, 'test-uuid');
+      const snapshot = toSnapshot(webhookParticipant);
 
       expect(snapshot.perk_participant_id).toBe(12345);
       expect(snapshot.email).toBe('fan@bluejackets.com');
@@ -124,7 +120,6 @@ describe('Perk Participant Normalization', () => {
 
       expect(snapshot).toEqual({
         perk_participant_id: 12345,
-        perk_uuid: 'test-perk-uuid',
         email: 'fan@bluejackets.com',
         points: 250,
         unused_points: 125,

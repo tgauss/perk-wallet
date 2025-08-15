@@ -5,6 +5,27 @@ All notable changes to the Perk Wallet project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.2] – 2025-08-15
+
+### Changed
+
+- **Legacy Path Cleanup**: Removed final perk_uuid participant routes
+  - Deleted `/admin/participants/[perk_uuid]` route  
+  - Added safe redirect from `/admin/participants/*` to admin dashboard
+  - Created program-scoped participant route: `/admin/programs/{programId}/participants/{perkParticipantId}`
+  - Updated documentation to reflect composite key architecture
+
+### Fixed
+
+- **Test Suite**: Updated all test files to use composite key (program_id, perk_participant_id)
+- **Documentation**: Updated README and ROUTES.md to show correct participant paths
+
+### Technical Details
+
+- **0 perk_uuid references** remaining in source code (verified by grep)
+- **Composite participant route** uses proper database queries with maybeSingle()
+- **Admin redirect** safely handles legacy participant URLs with helpful messaging
+
 ## [v0.6.1] – 2025-08-15
 
 ### Added

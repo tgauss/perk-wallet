@@ -5,7 +5,6 @@ import type { ParticipantSnapshot } from '../perk/normalize';
 describe('Merge Tags', () => {
   const sampleSnapshot: ParticipantSnapshot = {
     perk_participant_id: 12345,
-    perk_uuid: 'test-uuid',
     email: 'fan@bluejackets.com',
     points: 250,
     unused_points: 125,

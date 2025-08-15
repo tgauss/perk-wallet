@@ -150,9 +150,8 @@ GET /admin/programs/{programId}/templates/{draftId}  # Template editor
 #### Participant Management
 
 ```http
-GET /admin/participants                # Search participants
-GET /admin/participants/{perkUuid}     # Participant details (legacy)
-GET /admin/programs/{programId}/participants/{perkParticipantId}  # New composite key
+GET /admin/participants                # Legacy redirect (moved to program context)
+GET /admin/programs/{programId}/participants/{perkParticipantId}  # Participant details (composite key)
 ```
 
 #### Operations
