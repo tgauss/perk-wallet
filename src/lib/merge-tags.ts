@@ -62,10 +62,10 @@ export const MERGE_TAGS: MergeTag[] = [
 
   // Program context
   {
-    tag: '{perk_uuid}',
-    label: 'Participant UUID',
-    source: 'participant.perk_uuid',
-    example: 'abc123-def456'
+    tag: '{perk_participant_id}',
+    label: 'Perk Participant ID',
+    source: 'participant.perk_participant_id',
+    example: '123456'
   },
   {
     tag: '{program_id}',

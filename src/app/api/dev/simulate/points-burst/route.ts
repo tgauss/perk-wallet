@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 
 const SimulatePointsBurstSchema = z.object({
   program_id: z.string(),
-  perk_uuid: z.string(),
+  perk_participant_id: z.number(),
   totalEvents: z.number().min(1).max(20).default(5),
   deltaPerEvent: z.number().min(1).max(100).default(5),
   durationSec: z.number().min(10).max(300).default(90),
@@ -23,16 +23,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { program_id, perk_uuid, totalEvents, deltaPerEvent, durationSec } = 
+    const { program_id, perk_participant_id, totalEvents, deltaPerEvent, durationSec } = 
       SimulatePointsBurstSchema.parse(body);
 
-    console.log(`🧪 Simulating points burst: ${totalEvents} events over ${durationSec}s for ${perk_uuid}`);
+    console.log(`🧪 Simulating points burst: ${totalEvents} events over ${durationSec}s for participant ${perk_participant_id}`);
 
     // Verify participant exists
     const { data: participant } = await supabase
       .from('participants')
       .select('*')
-      .eq('perk_uuid', perk_uuid)
+      .eq('perk_participant_id', perk_participant_id)
       .eq('program_id', program_id)
       .single();
 
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       const event = {
         id: randomUUID(),
         program_id,
-        participant_uuid: perk_uuid,
+        participant_id: perk_participant_id,
         rule: 'points_updated' as const,
         data: {
           ...(pointsDisplay === 'points' 
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
         status: 'completed',
         payload: {
           program_id,
-          perk_uuid,
+          perk_participant_id,
           totalEvents,
           deltaPerEvent,
           durationSec,
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
         points_display: pointsDisplay,
         start_time: startTime.toISOString(),
         participant: {
-          perk_uuid,
+          perk_participant_id,
           email: participant.email,
           current_points: currentPoints,
         },

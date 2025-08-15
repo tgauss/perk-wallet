@@ -305,7 +305,7 @@ async function checkRoutes(request: NextRequest): Promise<DoctorItem[]> {
       },
       body: JSON.stringify({ 
         program_id: '44', 
-        perk_uuid: 'test-uuid-1', 
+        perk_participant_id: 123, 
         pass_kind: 'loyalty', 
         download: false 
       })

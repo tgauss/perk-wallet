@@ -4,13 +4,14 @@ import { supabase } from '@/lib/supabase';
 
 const InstallTokenRequestSchema = z.object({
   program_id: z.string(),
-  perk_uuid: z.string(),
+  perk_participant_id: z.string(),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { program_id, perk_uuid } = InstallTokenRequestSchema.parse(body);
+    const { program_id, perk_participant_id } = InstallTokenRequestSchema.parse(body);
+    const perkParticipantIdNum = parseInt(perk_participant_id, 10);
 
     console.log('Looking for program with perk_program_id:', Number(program_id));
     
@@ -29,12 +30,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Looking for participant with perk_uuid:', perk_uuid, 'and program.id:', program.id);
+    console.log('Looking for participant with perk_participant_id:', perkParticipantIdNum, 'and program.id:', program.id);
     
     const { data: participant, error: participantError } = await supabase
       .from('participants')
       .select('*')
-      .eq('perk_uuid', perk_uuid)
+      .eq('perk_participant_id', perkParticipantIdNum)
       .eq('program_id', program.id)
       .single();
 
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (!participant) {
       return NextResponse.json(
-        { error: 'Participant not found', debug: { perk_uuid, program_id: program.id, error: participantError } },
+        { error: 'Participant not found', debug: { perk_participant_id: perkParticipantIdNum, program_id: program.id, error: participantError } },
         { status: 404 }
       );
     }
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     const { data: passes } = await supabase
       .from('passes')
       .select('*')
-      .eq('perk_uuid', perk_uuid)
+      .eq('perk_participant_id', perkParticipantIdNum)
       .eq('program_id', program.id);
 
     if (!passes || passes.length === 0) {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          perk_uuid,
+          perk_participant_id: perkParticipantIdNum,
           program_id: program.id,
         }),
       });
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
         },
         installUrl: issueData.install_url,
         googleSaveUrl: issueData.google_save_url,
-        applePassUrl: `/api/passes/${perk_uuid}/download/apple`,
+        applePassUrl: `/api/passes/${program_id}/${perk_participant_id}/download/apple`,
       });
     }
 
@@ -102,9 +103,9 @@ export async function POST(request: NextRequest) {
         points: participant.points,
         tier: participant.status ?? '',
       },
-      installUrl: `${process.env.NEXT_PUBLIC_APP_URL}/w/${program_id}/${perk_uuid}`,
+      installUrl: `${process.env.NEXT_PUBLIC_APP_URL}/w/${program_id}/${perk_participant_id}`,
       googleSaveUrl,
-      applePassUrl: `/api/passes/${perk_uuid}/download/apple`,
+      applePassUrl: `/api/passes/${program_id}/${perk_participant_id}/download/apple`,
     });
   } catch (error) {
     console.error('Install token error:', error);

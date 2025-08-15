@@ -20,17 +20,34 @@ function generateDataHash(data: unknown): string {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ perk_uuid: string }> }
+  { params }: { params: Promise<{ programId: string; perkParticipantId: string }> }
 ) {
   try {
-    const { perk_uuid } = await params;
+    const { programId, perkParticipantId } = await params;
+    const perkProgramId = parseInt(programId, 10);
+    const perkParticipantIdNum = parseInt(perkParticipantId, 10);
     const body = await request.json();
     const updates = UpdatePassRequestSchema.parse(body);
 
+    // First get the program to resolve the internal UUID
+    const { data: program } = await supabase
+      .from('programs')
+      .select('*')
+      .eq('perk_program_id', perkProgramId)
+      .single();
+
+    if (!program) {
+      return NextResponse.json(
+        { error: 'Program not found' },
+        { status: 404 }
+      );
+    }
+
     const { data: participant } = await supabase
       .from('participants')
-      .select('*, passes(*), programs(*)')
-      .eq('perk_uuid', perk_uuid)
+      .select('*, passes(*)')
+      .eq('program_id', program.id)
+      .eq('perk_participant_id', perkParticipantIdNum)
       .single();
 
     if (!participant) {
@@ -40,18 +57,6 @@ export async function PATCH(
       );
     }
 
-    const { data: program } = await supabase
-      .from('programs')
-      .select('*')
-      .eq('id', participant.program_id)
-      .single();
-
-    if (!program) {
-      return NextResponse.json(
-        { error: 'Program not found' },
-        { status: 404 }
-      );
-    }
 
     const perkClient = new PerkClient(program.api_key);
     const updatedParticipant = await perkClient.getParticipantById(participant.perk_participant_id);
@@ -72,7 +77,8 @@ export async function PATCH(
         profile_attributes: updatedParticipant.profile_attributes,
         last_sync_at: new Date().toISOString(),
       })
-      .eq('id', participant.id);
+      .eq('program_id', program.id)
+      .eq('perk_participant_id', perkParticipantIdNum);
 
     const updatedPasses = [];
     
@@ -123,7 +129,7 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       participant: {
-        perk_uuid,
+        perk_participant_id: perkParticipantIdNum,
         points: updatedParticipant.points,
         tier: updatedParticipant.tier,
       },

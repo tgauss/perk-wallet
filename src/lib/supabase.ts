@@ -89,11 +89,9 @@ export type Database = {
       };
       participants: {
         Row: {
-          id: string;
-          perk_uuid: string;
           program_id: string;
           email: string;
-          perk_participant_id: string;
+          perk_participant_id: number;
           points: number;
           unused_points: number;
           tier: string | null;
@@ -109,14 +107,14 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['participants']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Insert: Omit<Database['public']['Tables']['participants']['Row'], 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['participants']['Insert']>;
       };
       passes: {
         Row: {
           id: string;
-          perk_uuid: string;
           program_id: string;
+          perk_participant_id: number;
           pass_kind: 'loyalty' | 'rewards';
           apple_serial_number: string | null;
           apple_auth_token: string | null;
@@ -157,7 +155,6 @@ export type Database = {
           event_id: string;
           participant_id: number | null;
           participant_email: string | null;
-          participant_uuid: string | null;
           event_data: Record<string, any>;
           processed_at: string;
           created_at: string;

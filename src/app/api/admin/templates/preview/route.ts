@@ -9,7 +9,7 @@ const PreviewRequestSchema = z.object({
   program_id: z.string().min(1),
   draft_id: z.string().min(1),
   participant: z.object({
-    perk_uuid: z.string().optional(),
+    perk_participant_id: z.number().optional(),
     email: z.string().optional()
   }).optional()
 })

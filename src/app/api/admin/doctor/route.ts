@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
         .eq('table_schema', 'public')
       
       const columnNames = columns?.map(c => c.column_name) || []
-      const expected = ['perk_uuid', 'program_id', 'perk_participant_id', 'email', 'points', 'unused_points', 'status', 'profile_attributes', 'tag_list', 'updated_at', 'last_webhook_event_type', 'last_webhook_event_at', 'webhook_event_count']
+      const expected = ['program_id', 'perk_participant_id', 'email', 'points', 'unused_points', 'status', 'profile_attributes', 'tag_list', 'updated_at', 'last_webhook_event_type', 'last_webhook_event_at', 'webhook_event_count']
       const missing = expected.filter(col => !columnNames.includes(col))
       
       if (missing.length > 0) {
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
         .eq('table_schema', 'public')
       
       const columnNames = columns?.map(c => c.column_name) || []
-      const expected = ['perk_uuid', 'program_id', 'pass_kind', 'apple_serial', 'apple_device_tokens', 'google_object_id', 'last_hash', 'last_synced_at', 'last_error']
+      const expected = ['program_id', 'perk_participant_id', 'pass_kind', 'apple_serial', 'apple_device_tokens', 'google_object_id', 'last_hash', 'last_synced_at', 'last_error']
       const missing = expected.filter(col => !columnNames.includes(col))
       
       if (missing.length > 0) {
@@ -335,7 +335,7 @@ export async function GET(request: NextRequest) {
           },
           body: JSON.stringify({
             program_id: programId,
-            perk_uuid: 'test-uuid-1'
+            perk_participant_id: 123
           })
         })
         return `HTTP ${response.status}: ${response.statusText}`

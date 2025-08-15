@@ -120,7 +120,7 @@ export default function ParticipantsSearch() {
                               {participant.email}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              UUID: {participant.perk_uuid}
+                              ID: {participant.perk_participant_id}
                             </div>
                           </div>
                         </TableCell>
@@ -152,7 +152,7 @@ export default function ParticipantsSearch() {
                               size="sm"
                               asChild
                             >
-                              <Link href={`/admin/participants/${participant.perk_uuid}`}>
+                              <Link href={`/admin/programs/${participant.program_id}/participants/${participant.perk_participant_id}`}>
                                 <ExternalLink className="w-3 h-3 mr-1" />
                                 View
                               </Link>

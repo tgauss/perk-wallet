@@ -181,7 +181,8 @@ async function sendPointsUpdatedNotification(buffer: NotificationBuffer, setting
   const { data: participant } = await supabase
     .from('participants')
     .select('*')
-    .eq('perk_uuid', buffer.participant_uuid)
+    .eq('program_id', buffer.program_id)
+    .eq('perk_participant_id', buffer.participant_id)
     .single();
   
   if (!participant) {
@@ -199,7 +200,7 @@ async function sendPointsUpdatedNotification(buffer: NotificationBuffer, setting
   const context: MergeTagContext = {
     snapshot: {
       perk_participant_id: parseInt(participant.perk_participant_id),
-      perk_uuid: participant.perk_uuid,
+      perk_participant_id: participant.perk_participant_id,
       email: participant.email,
       points: participant.points,
       unused_points: participant.unused_points,

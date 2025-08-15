@@ -111,7 +111,7 @@ export default function PassesFilter() {
                   {passes.map((pass) => (
                     <TableRow key={pass.id}>
                       <TableCell className="font-mono text-sm">
-                        {pass.perk_uuid}
+                        {pass.perk_participant_id}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{pass.pass_kind}</Badge>

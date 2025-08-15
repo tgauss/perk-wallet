@@ -5,7 +5,6 @@ import { buildQr } from './qr'
 
 // Types for preview context
 export interface PreviewParticipant {
-  perk_uuid: string
   perk_participant_id: number
   email: string
   fname: string | null
@@ -56,7 +55,7 @@ export async function getSampleParticipant(
 
     if (!error && data) {
       return {
-        perk_uuid: `perk-${data.perk_participant_id}`, // Keep for backward compat
+        perk_participant_id: `perk-${data.perk_participant_id}`, // Keep for backward compat
         perk_participant_id: data.perk_participant_id,
         email: data.email,
         fname: data.fname,
@@ -74,7 +73,7 @@ export async function getSampleParticipant(
 
   // Fallback to mock data
   return {
-    perk_uuid: 'sample-uuid-123',
+    perk_participant_id: 'sample-uuid-123',
     perk_participant_id: 246785,
     email: 'john.doe@example.com',
     fname: 'John',
@@ -154,8 +153,8 @@ export function resolveMergeTags(input: string, ctx: PreviewContext): string {
         case '{tier}':
           value = ctx.participant.tier || ''
           break
-        case '{perk_uuid}':
-          value = ctx.participant.perk_uuid
+        case '{perk_participant_id}':
+          value = ctx.participant.perk_participant_id
           break
         case '{program_id}':
           value = ctx.program.id

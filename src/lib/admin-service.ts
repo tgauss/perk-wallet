@@ -179,7 +179,7 @@ export async function searchParticipants(searchQuery: string, programId?: string
 
   // Apply search filter
   if (searchQuery) {
-    query = query.or(`email.ilike.%${searchQuery}%,perk_uuid.ilike.%${searchQuery}%`)
+    query = query.or(`email.ilike.%${searchQuery}%,perk_participant_id.eq.${parseInt(searchQuery) || 0}`)
   }
 
   const { data, error } = await query

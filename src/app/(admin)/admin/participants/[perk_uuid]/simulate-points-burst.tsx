@@ -47,7 +47,7 @@ export default function SimulatePointsBurst({
         },
         body: JSON.stringify({
           program_id: programId,
-          perk_uuid: perkUuid,
+          perk_participant_id: parseInt(perkUuid),
           ...formData,
         }),
       })

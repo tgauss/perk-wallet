@@ -66,15 +66,15 @@ async function handleNewParticipant(event: WebhookEvent): Promise<void> {
 
   const { data: existingParticipant } = await supabase
     .from('participants')
-    .select('id')
-    .eq('perk_uuid', participant.uuid)
+    .select('perk_participant_id')
+    .eq('program_id', program.id)
+    .eq('perk_participant_id', Number(participant_id))
     .single();
   
   if (!existingParticipant) {
     await supabase
       .from('participants')
       .insert({
-        perk_uuid: participant.uuid,
         program_id: program.id,
         email: participant.email,
         perk_participant_id: participant.id,
@@ -87,7 +87,6 @@ async function handleNewParticipant(event: WebhookEvent): Promise<void> {
   }
 
   await jobQueue.enqueue('issue_passes', {
-    perk_uuid: participant.uuid,
     program_id: program.id,
     participant_id: participant.id,
   });

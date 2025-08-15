@@ -3,14 +3,14 @@ import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 
 const TestIssueRequestSchema = z.object({
-  perk_uuid: z.string(),
+  perk_participant_id: z.number(),
   program_id: z.string(),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { perk_uuid, program_id } = TestIssueRequestSchema.parse(body);
+    const { perk_participant_id, program_id } = TestIssueRequestSchema.parse(body);
 
     // Handle both numeric program_id and UUID program_id
     let program;
@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
     const { data: participant } = await supabase
       .from('participants')
       .select('*')
-      .eq('perk_uuid', perk_uuid)
+      .eq('perk_participant_id', perk_participant_id)
+      .eq('program_id', program.id)
       .single();
 
     console.log('Test issue - participant lookup result:', participant);
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     const { data: loyaltyPass } = await supabase
       .from('passes')
       .insert({
-        perk_uuid: perk_uuid,
+        perk_participant_id: perk_participant_id,
         program_id: program.id,
         pass_kind: 'loyalty',
         apple_serial_number: 'test-loyalty-123',
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
     const { data: rewardsPass } = await supabase
       .from('passes')
       .insert({
-        perk_uuid: perk_uuid,
+        perk_participant_id: perk_participant_id,
         program_id: program.id,
         pass_kind: 'rewards',
         apple_serial_number: 'test-rewards-123',
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    const installUrl = `${process.env.NEXT_PUBLIC_APP_URL}/w/${program.perk_program_id}/${perk_uuid}`;
+    const installUrl = `${process.env.NEXT_PUBLIC_APP_URL}/w/${program.perk_program_id}/${perk_participant_id}`;
 
     return NextResponse.json({
       success: true,
