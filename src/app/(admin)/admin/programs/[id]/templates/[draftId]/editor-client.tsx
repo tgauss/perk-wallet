@@ -20,10 +20,14 @@ import {
   CheckCircle,
   AlertCircle,
   FileImage,
-  MapPin
+  MapPin,
+  X,
+  Loader2,
+  Image as ImageIcon
 } from 'lucide-react'
 import { updateDraft, publishDraft, ensurePassAssetsBucket } from './actions'
 import type { DraftUpdateResult, PublishResult } from './actions'
+import { uploadAsset, type AssetKind, type UploadAssetResult } from './upload-action'
 
 // Types
 interface TemplateDraft {
@@ -90,6 +94,8 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [previewMode, setPreviewMode] = useState<'apple' | 'google'>('apple')
+  const [uploadingAssets, setUploadingAssets] = useState<Set<AssetKind>>(new Set())
+  const [currentAssets, setCurrentAssets] = useState<Record<string, any>>(draft.assets)
 
   const handleFormatJSON = (type: 'layout' | 'assets') => {
     if (type === 'layout') {
@@ -159,6 +165,154 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
         setErrorMessage(error instanceof Error ? error.message : 'Failed to publish')
       }
     })
+  }
+
+  const handleAssetUpload = async (file: File, kind: AssetKind) => {
+    setUploadingAssets(prev => new Set([...prev, kind]))
+    setErrorMessage(null)
+
+    try {
+      const result: UploadAssetResult = await uploadAsset({
+        programId,
+        draftId: draft.id,
+        file,
+        kind
+      })
+
+      if (result.ok) {
+        // Update local assets state
+        const newAssets = {
+          ...currentAssets,
+          [kind]: result.url
+        }
+        setCurrentAssets(newAssets)
+        setAssetsJson(formatJSON(newAssets))
+
+        // Persist to database
+        const updateResult = await updateDraft(draft.id, {
+          assets: newAssets
+        })
+
+        if (!updateResult.ok) {
+          setErrorMessage(`Upload succeeded but failed to save: ${updateResult.error}`)
+        }
+      } else {
+        setErrorMessage(result.error)
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Upload failed')
+    } finally {
+      setUploadingAssets(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(kind)
+        return newSet
+      })
+    }
+  }
+
+  const handleAssetRemove = async (kind: AssetKind) => {
+    const newAssets = { ...currentAssets }
+    delete newAssets[kind]
+    
+    setCurrentAssets(newAssets)
+    setAssetsJson(formatJSON(newAssets))
+
+    // Persist to database
+    try {
+      const result = await updateDraft(draft.id, {
+        assets: newAssets
+      })
+
+      if (!result.ok) {
+        setErrorMessage(`Failed to remove asset: ${result.error}`)
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to remove asset')
+    }
+  }
+
+  // Asset uploader component
+  const AssetUploader = ({ kind, label, description }: { 
+    kind: AssetKind; 
+    label: string; 
+    description: string 
+  }) => {
+    const isUploading = uploadingAssets.has(kind)
+    const currentUrl = currentAssets[kind]
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <Label className="text-sm font-medium">{label}</Label>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+        
+        {currentUrl ? (
+          <div className="space-y-2">
+            <div className="relative w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+              <img 
+                src={currentUrl} 
+                alt={label}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => document.getElementById(`file-${kind}`)?.click()}
+                disabled={isUploading}
+              >
+                Replace
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleAssetRemove(kind)}
+                disabled={isUploading}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div 
+              className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
+              onClick={() => document.getElementById(`file-${kind}`)?.click()}
+            >
+              {isUploading ? (
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              ) : (
+                <ImageIcon className="w-6 h-6 text-muted-foreground" />
+              )}
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => document.getElementById(`file-${kind}`)?.click()}
+              disabled={isUploading}
+              className="w-24"
+            >
+              {isUploading ? 'Uploading...' : 'Upload'}
+            </Button>
+          </div>
+        )}
+        
+        <input
+          id={`file-${kind}`}
+          type="file"
+          accept="image/png,image/jpg,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              handleAssetUpload(file, kind)
+            }
+          }}
+        />
+      </div>
+    )
   }
 
   return (
@@ -337,28 +491,40 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
                   <span>Asset Management</span>
                 </CardTitle>
                 <CardDescription>
-                  Upload and manage template assets
+                  Upload and manage template assets (PNG, JPG, JPEG, WebP - max 5MB)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Alert>
-                  <Upload className="h-4 w-4" />
-                  <AlertDescription>
-                    Asset upload interface coming soon. Will support upload to 
-                    pass-assets/programs/{programId}/drafts/{draft.id}/
-                  </AlertDescription>
-                </Alert>
-                
-                <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-                  <div className="text-sm text-muted-foreground">
-                    Supported asset types:
-                  </div>
-                  <ul className="mt-2 text-sm space-y-1">
-                    <li>• Logo images (PNG, JPG)</li>
-                    <li>• Background images</li>
-                    <li>• Icons and badges</li>
-                    <li>• Strip images for Apple Wallet</li>
-                  </ul>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <AssetUploader
+                    kind="logo"
+                    label="Logo"
+                    description="Main brand logo displayed on pass"
+                  />
+                  
+                  <AssetUploader
+                    kind="icon"
+                    label="Icon"
+                    description="Small icon for notifications and lists"
+                  />
+                  
+                  <AssetUploader
+                    kind="strip"
+                    label="Strip Image"
+                    description="Apple Wallet strip background"
+                  />
+                  
+                  <AssetUploader
+                    kind="background"
+                    label="Background"
+                    description="Full background image for pass"
+                  />
+                  
+                  <AssetUploader
+                    kind="googleCover"
+                    label="Google Cover"
+                    description="Google Wallet cover image"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -409,16 +575,66 @@ export function EditorClient({ draft, programId }: EditorClientProps) {
                           </span>
                         </div>
                         
-                        <div className="flex-1 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                          <div className="text-center space-y-2">
-                            <Palette className="w-8 h-8 text-muted-foreground mx-auto" />
-                            <div className="text-sm text-muted-foreground">
-                              Rendering engine coming soon
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Pass Kind: {draft.pass_kind}
+                        <div className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-3 flex flex-col">
+                          {/* Header with logo */}
+                          <div className="flex items-center space-x-2 pb-2 border-b">
+                            {currentAssets.logo ? (
+                              <img 
+                                src={currentAssets.logo} 
+                                alt="Logo" 
+                                className="w-8 h-8 object-contain"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+                                <ImageIcon className="w-4 h-4 text-gray-400" />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <div className="text-sm font-medium">Pass Title</div>
+                              <div className="text-xs text-muted-foreground capitalize">
+                                {draft.pass_kind} Pass
+                              </div>
                             </div>
                           </div>
+                          
+                          {/* Background area */}
+                          <div 
+                            className="flex-1 mt-2 rounded border flex items-center justify-center text-center relative overflow-hidden"
+                            style={{
+                              backgroundImage: currentAssets.background 
+                                ? `url(${currentAssets.background})` 
+                                : currentAssets.strip 
+                                  ? `url(${currentAssets.strip})` 
+                                  : undefined,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center'
+                            }}
+                          >
+                            {currentAssets.background || currentAssets.strip ? (
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <div className="text-white text-xs">Preview Content</div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Palette className="w-6 h-6 text-muted-foreground mx-auto" />
+                                <div className="text-xs text-muted-foreground">
+                                  Upload assets to see preview
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Icon preview */}
+                          {currentAssets.icon && (
+                            <div className="mt-2 flex items-center space-x-2 text-xs text-muted-foreground">
+                              <img 
+                                src={currentAssets.icon} 
+                                alt="Icon" 
+                                className="w-4 h-4 object-contain"
+                              />
+                              <span>Notification icon</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
