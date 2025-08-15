@@ -5,6 +5,57 @@ All notable changes to the Perk Wallet project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.4.0] – 2025-08-15
+
+### Added
+- **Template Studio MVP**: Complete template editing system
+  - Template drafts list with program-scoped management
+  - Multi-tab Template Editor (Layout, Fields, Assets, Preview, Publish)
+  - Asset upload system with 5 asset types (logo, icon, strip, background, googleCover)
+  - Live preview with real participant data resolution
+  
+- **Merge Tags System** (`src/lib/merge-tags.ts`)
+  - 12+ dynamic content tags: `{fname}`, `{lname}`, `{name}`, `{email}`, `{points}`, `{unused_points}`, `{tier}`, `{status}`
+  - Program context tags: `{program_id}`, `{program_name}`, `{perk_uuid}`
+  - Dynamic attributes: `{attr:KEY}` for custom profile data
+  - Tag validation and autocomplete system
+
+- **Preview Resolver** (`src/lib/preview.ts`)
+  - API endpoint `/api/admin/templates/preview` for real-time template resolution
+  - Sample participant data fallback system
+  - Deep object traversal for tag replacement
+  - 16 comprehensive unit tests with vitest
+
+- **Field Mapping UI**
+  - Visual editor for common template fields (header, primary fields, points)
+  - Autocomplete with merge tag suggestions
+  - "Apply to Layout" workflow integration
+  - Reference panel with all available tags
+
+- **Asset Management**
+  - Supabase Storage integration with `pass-assets` bucket
+  - File validation (PNG, JPG, JPEG, WebP up to 5MB)
+  - Organized storage: `programs/{id}/drafts/{id}/{uuid}/{filename}`
+  - Replace/remove functionality with optimistic UI
+
+### Changed
+- **Template Editor**: Enhanced with tabbed interface and live functionality
+- **Preview System**: Now uses API-resolved data instead of static mock data
+- **Database Schema**: Added `template_drafts` table with migration file
+
+### Technical Details
+- **Build Status**: ✅ Successfully compiles (12 kB bundle for editor)
+- **Tests**: All 16 unit tests passing for preview resolver
+- **API**: RESTful template preview endpoint with Zod validation
+- **Storage**: File uploads with proper error handling and user feedback
+
+### Related Commits
+- `345080e`: Asset upload system implementation
+- `[previous]`: Merge tags and preview resolver
+- `[previous]`: Template Editor foundation
+
+---
+
 ## [0.3.1] - 2025-08-12
 
 ### Fixed

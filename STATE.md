@@ -1,8 +1,8 @@
 # Perk Wallet - Current State
 
-**Last Updated**: 2025-01-14  
+**Last Updated**: 2025-08-15  
 **Production URL**: https://pass.perk.ooo  
-**Latest Commit**: 2cfe6d8
+**Latest Commit**: 345080e
 
 ## Major Features
 
@@ -15,7 +15,8 @@
 ### Admin Pages
 - **Dashboard**: System KPIs and real-time monitoring
 - **Programs**: Multi-program management with status control (draft/active/inactive)
-- **Templates**: JSON editor with Zod validation and versioning
+- **Templates**: Template drafts list with editor and preview
+- **Template Editor**: Asset uploads, merge tags, field mapping, live preview
 - **Participants**: Search, points management, pass reissuance
 - **Passes**: Wallet pass management and sync status
 - **Jobs**: Background job monitoring with retry capabilities
@@ -34,6 +35,14 @@
 - **Branding Page**: Live preview editor for colors, fonts, borders, assets
 - **File Upload**: Supabase Storage integration for brand assets
 - **Theme Doctor**: Diagnostic page for QA testing
+
+### Template Studio MVP
+- **Template Drafts**: Program-scoped draft management system
+- **Template Editor**: Multi-tab editor with layout, fields, assets, preview tabs
+- **Asset Upload**: 5 asset types with Supabase Storage integration
+- **Merge Tags**: 12+ dynamic tags including {attr:KEY} custom attributes
+- **Preview Resolver**: API-driven template preview with real participant data
+- **Field Mapping**: Visual editor with autocomplete for common template fields
 
 ### Notification System
 - **Intelligent merging**: 120-second window for rapid point updates
@@ -64,8 +73,12 @@ programs:
   apple_pass_type_id, google_wallet_class_id
 
 templates:
-  id, program_id, pass_type, version, is_active,
+  id, program_id, pass_kind, version, is_active,
   apple_template, google_template, fields_mapping
+
+template_drafts:
+  id, program_id, pass_kind, based_on_template,
+  layout, assets, created_at, updated_at
 
 participants:
   id, perk_uuid, program_id, email, perk_participant_id,
@@ -127,10 +140,19 @@ APPLE_DOCTOR_DEBUG
 
 ## Open TODOs
 
+### Next Steps (Small, Shippable Tasks)
+- **Field-level validations**: Add validation rules for template fields
+- **Richer device preview**: Enhanced visual preview with actual wallet frames
+- **Google class creation**: Auto-create Google Wallet classes from templates
+- **Apple web service routes**: Complete Apple Wallet web service endpoints
+- **Install link publisher**: Public pass installation pages
+- **Link tracking**: Track pass installation and usage analytics
+- **Points notification throttle**: Implement notification delivery system
+
 ### High Priority
-- **Notification delivery**: Replace mock with actual email/push implementation
 - **Real authentication**: Replace emulator with production auth system
-- **Template updates**: Server-side template update API
+- **Template publishing workflow**: Complete draft → template publishing
+- **Pass regeneration**: Trigger pass updates when templates change
 
 ### Technical Debt
 - Comprehensive error tracking (Sentry)
